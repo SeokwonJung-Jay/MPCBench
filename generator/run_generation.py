@@ -40,37 +40,51 @@ def main():
     print(f"[run_generation] Loading world_state from {world_state_path}...")
     with open(world_state_path, 'r', encoding='utf-8') as f:
         world_state = json.load(f)
-    print(f"[run_generation] World_state loaded successfully")
+    
+    # Log world_state summary
+    loaded_scenario_id = world_state.get("scenario_id", scenario_id)
+    people_count = len(world_state.get("people", []))
+    sub_scenarios_expanded_count = len(world_state.get("sub_scenarios_expanded", []))
+    noise_scenarios_count = len(world_state.get("noise_scenarios", []))
+    print(f"[run_generation] Loaded world_state: scenario_id={loaded_scenario_id}, people={people_count}, sub_scenarios_expanded={sub_scenarios_expanded_count}, noise_scenarios={noise_scenarios_count}")
     
     # Extract per_source_plans from LLM-generated world_state
     print(f"[run_generation] Building per-source event plans...")
     plans = build_event_plans(world_state)
-    print(f"[run_generation] Plans built. Counts per source:")
-    print(f"  - Slack plans: {len(plans.get('slack_plans', []))}")
-    print(f"  - Gmail plans: {len(plans.get('gmail_plans', []))}")
-    print(f"  - Calendar plans: {len(plans.get('calendar_plans', []))}")
-    print(f"  - Contacts plans: {len(plans.get('contacts_plans', []))}")
-    print(f"  - Jira plans: {len(plans.get('jira_plans', []))}")
-    print(f"  - Drive plans: {len(plans.get('drive_plans', []))}")
+    
+    # Log plan counts (even if already printed in propagation_engine)
+    slack_plans_count = len(plans.get('slack_plans', []))
+    gmail_plans_count = len(plans.get('gmail_plans', []))
+    calendar_plans_count = len(plans.get('calendar_plans', []))
+    contacts_plans_count = len(plans.get('contacts_plans', []))
+    jira_plans_count = len(plans.get('jira_plans', []))
+    drive_plans_count = len(plans.get('drive_plans', []))
+    print(f"[run_generation] Plans: slack={slack_plans_count}, gmail={gmail_plans_count}, calendar={calendar_plans_count}, contacts={contacts_plans_count}, jira={jira_plans_count}, drive={drive_plans_count}")
     
     # Generate data for each source
-    print(f"[run_generation] Generating Slack data...")
+    print(f"[run_generation] Calling generate_slack_data...")
     slack_data = generate_slack_data(world_state, plans["slack_plans"])
+    print(f"[run_generation] Finished generate_slack_data")
     
-    print(f"[run_generation] Generating Gmail data...")
+    print(f"[run_generation] Calling generate_gmail_data...")
     gmail_data = generate_gmail_data(world_state, plans["gmail_plans"])
+    print(f"[run_generation] Finished generate_gmail_data")
     
-    print(f"[run_generation] Generating Calendar data...")
+    print(f"[run_generation] Calling generate_calendar_data...")
     calendar_data = generate_calendar_data(world_state, plans["calendar_plans"])
+    print(f"[run_generation] Finished generate_calendar_data")
     
-    print(f"[run_generation] Generating Contacts data...")
+    print(f"[run_generation] Calling generate_contacts_data...")
     contacts_data = generate_contacts_data(world_state, plans["contacts_plans"])
+    print(f"[run_generation] Finished generate_contacts_data")
     
-    print(f"[run_generation] Generating Jira data...")
+    print(f"[run_generation] Calling generate_jira_data...")
     jira_data = generate_jira_data(world_state, plans["jira_plans"])
+    print(f"[run_generation] Finished generate_jira_data")
     
-    print(f"[run_generation] Generating Drive data...")
+    print(f"[run_generation] Calling generate_drive_data...")
     drive_data = generate_drive_data(world_state, plans["drive_plans"])
+    print(f"[run_generation] Finished generate_drive_data")
     
     # Write output files (using scenario_id in filename)
     output_dir = Path("data")

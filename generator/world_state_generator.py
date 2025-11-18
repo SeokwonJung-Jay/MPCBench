@@ -75,8 +75,15 @@ def generate_world_state(scenario_id: str = "scenario_A") -> Dict[str, Any]:
     with open(scenario_path, 'r', encoding='utf-8') as f:
         scenario = json.load(f)
     
+    # Log start with configuration
+    noise_level = scenario.get('noise_level', 0.0)
+    depth = scenario.get('depth', 0.0)
+    base_sub_scenarios_count = len(scenario.get('sub_scenarios', []))
+    print(f"[world_state_generator] Start building world_state for scenario_id={scenario_id}, noise_level={noise_level}, depth={depth}, base_sub_scenarios={base_sub_scenarios_count}")
+    
     # Load world_state_model
     world_state_model = load_world_state_model()
+    print(f"[world_state_generator] Using model: {world_state_model}")
     
     # Initialize OpenAI client
     client = OpenAI()
@@ -129,6 +136,7 @@ Remember:
 Output the complete world_state JSON now."""
 
     # Call LLM
+    print(f"[world_state_generator] Calling LLM to generate world_state...")
     response = client.chat.completions.create(
         model=world_state_model,
         messages=[
@@ -140,6 +148,7 @@ Output the complete world_state JSON now."""
     
     # Extract response
     content = response.choices[0].message.content.strip()
+    print(f"[world_state_generator] LLM response received, length={len(content)} chars")
     
     # Parse JSON (handle markdown code fences if present)
     if content.startswith("```"):
@@ -152,6 +161,7 @@ Output the complete world_state JSON now."""
     
     try:
         world_state = json.loads(content)
+        print(f"[world_state_generator] Successfully parsed LLM response as JSON")
     except json.JSONDecodeError as e:
         raise ValueError(f"Failed to parse LLM response as JSON: {e}\nResponse was: {content[:500]}")
     
@@ -160,6 +170,7 @@ Output the complete world_state JSON now."""
     for key in required_keys:
         if key not in world_state:
             raise ValueError(f"Generated world_state missing required key: {key}")
+    print(f"[world_state_generator] Basic validation passed: required keys present")
     
     # Ensure scenario metadata is preserved
     world_state["scenario_id"] = scenario.get("scenario_id", scenario_id)
@@ -209,8 +220,14 @@ Output the complete world_state JSON now."""
     world_state["sub_scenarios_expanded"] = [s for tag, s in all_scenarios if tag == "real"]
     world_state["noise_scenarios"] = [s for tag, s in all_scenarios if tag == "noise"]
     
+    # Log separation results
+    sub_expanded_count = len(world_state["sub_scenarios_expanded"])
+    noise_count = len(world_state["noise_scenarios"])
+    print(f"[world_state_generator] base_sub_scenarios={base_sub_scenarios_count}, sub_scenarios_expanded={sub_expanded_count}, noise_scenarios={noise_count}")
+    
     # Ensure we have at least the expanded versions of input sub_scenarios
     # If any are missing, add placeholders (though ideally the LLM should generate them)
+    placeholder_count = 0
     for input_sub in scenario.get("sub_scenarios", []):
         input_id = input_sub.get("id")
         found = any(s.get("id") == input_id for s in world_state["sub_scenarios_expanded"])
@@ -222,6 +239,21 @@ Output the complete world_state JSON now."""
                 "abstract_description": input_sub.get("abstract_description", ""),
                 "note": "Auto-generated placeholder - LLM should have expanded this"
             })
+            placeholder_count += 1
+            print(f"[world_state_generator] Added placeholder for missing sub_scenario: id={input_id}")
+    
+    if placeholder_count > 0:
+        print(f"[world_state_generator] Warning: {placeholder_count} placeholder(s) added for missing sub_scenarios")
+    
+    # Log world_state summary before writing
+    world_state_keys = list(world_state.keys())
+    people_count = len(world_state.get("people", []))
+    projects_count = len(world_state.get("projects", []))
+    per_source_plans = world_state.get("per_source_plans", {})
+    plans_summary = {k: len(v) if isinstance(v, list) else "N/A" for k, v in per_source_plans.items()}
+    
+    print(f"[world_state_generator] world_state keys: {world_state_keys}")
+    print(f"[world_state_generator] Summary: people={people_count}, projects={projects_count}, sub_scenarios_expanded={sub_expanded_count}, noise_scenarios={noise_count}, per_source_plans={plans_summary}")
     
     # Write to output file
     output_path = Path(f"data/{scenario_id}_world_state.json")
@@ -230,7 +262,7 @@ Output the complete world_state JSON now."""
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(world_state, f, indent=2, ensure_ascii=False)
     
-    print(f"Generated world_state for {scenario_id} and saved to {output_path}")
+    print(f"[world_state_generator] Generated world_state for {scenario_id} and saved to {output_path}")
     
     return world_state
 

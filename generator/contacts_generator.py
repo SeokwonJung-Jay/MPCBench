@@ -8,6 +8,10 @@ def generate_contacts_data(world_state: Dict[str, Any], contacts_plans: List[Dic
     Generate a contacts store from world_state and contacts_plans.
     Must conform to schemas/contacts_schema.json.
     """
+    scenario_id = world_state.get("scenario_id", "scenario_A")
+    plans_count = len(contacts_plans)
+    print(f"[contacts_generator] Start: scenario_id={scenario_id}, plans={plans_count}")
+    
     # Build person lookup by ID
     people_by_id = {person["id"]: person for person in world_state["people"]}
     
@@ -41,6 +45,9 @@ def generate_contacts_data(world_state: Dict[str, Any], contacts_plans: List[Dic
                             "email": person["email"]
                         })
                         contacts_set.add(person_id)
+    
+    contacts_count = len(contacts)
+    print(f"[contacts_generator] Result: contacts={contacts_count}")
     
     return {
         "contacts": contacts

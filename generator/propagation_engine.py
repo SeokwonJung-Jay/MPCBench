@@ -17,6 +17,10 @@ def build_event_plans(world_state: Dict[str, Any]) -> Dict[str, Any]:
         Dict with keys: slack_plans, gmail_plans, calendar_plans, 
         contacts_plans, jira_plans, drive_plans. Each value is a list of plan dicts.
     """
+    sub_scenarios_expanded_count = len(world_state.get("sub_scenarios_expanded", []))
+    noise_scenarios_count = len(world_state.get("noise_scenarios", []))
+    print(f"[propagation_engine] Start build_event_plans: sub_scenarios_expanded={sub_scenarios_expanded_count}, noise_scenarios={noise_scenarios_count}")
+    
     # The LLM-generated world_state should contain per_source_plans
     per_source_plans = world_state.get("per_source_plans", {})
     
@@ -29,5 +33,17 @@ def build_event_plans(world_state: Dict[str, Any]) -> Dict[str, Any]:
         "jira_plans": per_source_plans.get("jira_plans", []),
         "drive_plans": per_source_plans.get("drive_plans", []),
     }
+    
+    # Log plan counts
+    slack_count = len(plans["slack_plans"])
+    gmail_count = len(plans["gmail_plans"])
+    calendar_count = len(plans["calendar_plans"])
+    contacts_count = len(plans["contacts_plans"])
+    jira_count = len(plans["jira_plans"])
+    drive_count = len(plans["drive_plans"])
+    print(f"[propagation_engine] Generated plans: slack={slack_count}, gmail={gmail_count}, calendar={calendar_count}, contacts={contacts_count}, jira={jira_count}, drive={drive_count}")
+    
+    plan_keys = list(plans.keys())
+    print(f"[propagation_engine] Plan dict built with keys: {plan_keys}")
     
     return plans

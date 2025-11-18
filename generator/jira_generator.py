@@ -9,6 +9,10 @@ def generate_jira_data(world_state: Dict[str, Any], jira_plans: List[Dict[str, A
     Generate Jira-like issues data from world_state and jira_plans.
     Must conform to schemas/jira_schema.json.
     """
+    scenario_id = world_state.get("scenario_id", "scenario_A")
+    plans_count = len(jira_plans)
+    print(f"[jira_generator] Start: scenario_id={scenario_id}, plans={plans_count}")
+    
     # Get projects from world_state
     projects = world_state.get("projects", [])
     issues = []
@@ -90,6 +94,10 @@ def generate_jira_data(world_state: Dict[str, Any], jira_plans: List[Dict[str, A
             "name": project.get("name", ""),
             "fixVersions": list(seen_versions.values())
         })
+    
+    projects_count = len(projects_list)
+    issues_count = len(issues)
+    print(f"[jira_generator] Result: projects={projects_count}, issues={issues_count}")
     
     return {
         "projects": projects_list,

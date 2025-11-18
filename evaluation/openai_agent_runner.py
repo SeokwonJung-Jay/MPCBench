@@ -350,6 +350,10 @@ def run_task_with_openai(
     
     task_id = task["task_id"]
     user_prompt = task["user_prompt"]
+    task_type = task.get("task_type", "")
+    
+    # Log start of agent run
+    print(f"[openai_agent_runner] Start: task_id={task_id}, task_type={task_type}, model={model}, data_root={data_root}")
     
     # Load context files from llm_context
     base_dir = Path(__file__).resolve().parent.parent / "llm_context"
@@ -390,7 +394,11 @@ def run_task_with_openai(
     rationale = ""
     
     # Agent loop
+    step_count = 0
     for round_idx in range(max_tool_rounds):
+        step_count += 1
+        print(f"[openai_agent_runner] Step {step_count}: calling model...")
+        
         # Call the model with tools
         completion = client.chat.completions.create(
             model=model,
@@ -404,6 +412,8 @@ def run_task_with_openai(
         
         # Check if model wants to call tools
         if msg.tool_calls and len(msg.tool_calls) > 0:
+            tool_calls_count = len(msg.tool_calls)
+            print(f"[openai_agent_runner] Step {step_count}: model returned {tool_calls_count} tool call(s)")
             # Append assistant message with tool_calls to messages
             assistant_msg: Dict[str, Any] = {
                 "role": "assistant",
@@ -425,7 +435,7 @@ def run_task_with_openai(
             messages.append(assistant_msg)
             
             # Process each tool call
-            for tool_call in msg.tool_calls:
+            for tool_call_idx, tool_call in enumerate(msg.tool_calls):
                 function_name = tool_call.function.name
                 arguments_json = tool_call.function.arguments
                 
@@ -438,8 +448,36 @@ def run_task_with_openai(
                 # Map to backend tool name
                 backend_tool_name = map_function_name_to_backend_tool_name(function_name)
                 
+                # Log tool call
+                arg_keys = list(arguments.keys()) if isinstance(arguments, dict) else []
+                print(f"[openai_agent_runner] Step {step_count}: tool_call -> name={backend_tool_name}, arguments keys={arg_keys}")
+                
                 # Call backend
                 result = backend.call_tool(backend_tool_name, arguments)
+                
+                # Log tool result summary
+                if isinstance(result, dict):
+                    # Create a short summary of the result
+                    if "matches" in result:
+                        result_summary = f"{len(result.get('matches', []))} matches"
+                    elif "contacts" in result:
+                        result_summary = f"{len(result.get('contacts', []))} contacts"
+                    elif "time_slots" in result:
+                        result_summary = f"{len(result.get('time_slots', []))} time slots"
+                    elif "events" in result:
+                        result_summary = f"{len(result.get('events', []))} events"
+                    elif "threads" in result:
+                        result_summary = f"{len(result.get('threads', []))} threads"
+                    elif "files" in result:
+                        result_summary = f"{len(result.get('files', []))} files"
+                    elif "issues" in result:
+                        result_summary = f"{len(result.get('issues', []))} issues"
+                    else:
+                        result_summary = f"dict with {len(result)} keys"
+                else:
+                    result_summary = str(type(result).__name__)
+                
+                print(f"[openai_agent_runner] Step {step_count}: tool_result -> name={backend_tool_name}, result_summary={result_summary}")
                 
                 # Log raw tool call
                 raw_tool_calls.append({
@@ -509,6 +547,7 @@ def run_task_with_openai(
         else:
             # No tool calls - this should be the final answer
             content = msg.content or ""
+            print(f"[openai_agent_runner] Step {step_count}: no tool calls, expecting final answer")
             
             # Try to parse JSON from content
             try:
@@ -530,6 +569,10 @@ def run_task_with_openai(
                 final_answer = content
                 rationale = ""
             
+            # Log final answer preview
+            final_preview = (final_answer[:120] + "...") if final_answer and len(final_answer) > 120 else (final_answer or "")
+            print(f"[openai_agent_runner] Final answer preview=\"{final_preview}\"")
+            
             # Break the loop
             break
     
@@ -549,6 +592,11 @@ def run_task_with_openai(
         "final_answer": final_answer,
         "rationale": rationale,
     }
+    
+    # Log run completion summary
+    total_steps = step_count
+    total_tool_calls = len(raw_tool_calls)
+    print(f"[openai_agent_runner] Run complete: steps={total_steps}, tool_calls={total_tool_calls}")
     
     return log
 

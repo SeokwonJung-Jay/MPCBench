@@ -68,6 +68,11 @@ def run_single_task(task_path: str, output_log_path: str = None, agent_model: st
     
     print(f"[run_single_task] Task loaded: task_id={task_id}, task_type={task_type}")
     
+    # Log user_prompt info
+    user_prompt_length = len(user_prompt) if user_prompt else 0
+    user_prompt_preview = (user_prompt[:80] + "...") if user_prompt and len(user_prompt) > 80 else (user_prompt or "")
+    print(f"[run_single_task] user_prompt length={user_prompt_length}, preview=\"{user_prompt_preview}\"")
+    
     if not task_id:
         raise ValueError(f"Task file {task_path} missing 'task_id' field")
     if not user_prompt:
