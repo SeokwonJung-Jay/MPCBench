@@ -175,6 +175,88 @@
           }
         }
       }
+    },
+    "sub_scenarios_expanded": {
+      "type": "array",
+      "description": "Expanded concrete versions of the sub_scenarios from the input scenario. Contains only the 'real' scenario units that the benchmark cares about.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID matching one of the sub_scenarios from the input scenario"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of sub-scenario (e.g., 'planning_meeting', 'feature_rollout_eta', 'weekly_report')"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "ISO datetime string for when this scenario occurs"
+          },
+          "start_time": {
+            "type": "string",
+            "description": "ISO datetime string for start time (if applicable)"
+          },
+          "end_time": {
+            "type": "string",
+            "description": "ISO datetime string for end time (if applicable)"
+          },
+          "participants": {
+            "type": "array",
+            "description": "List of participants (person IDs or objects with id/email)"
+          },
+          "event_description": {
+            "type": "string",
+            "description": "Detailed description of the expanded scenario"
+          },
+          "seed": {
+            "type": "string",
+            "description": "Seed identifier for data generation"
+          }
+        }
+      }
+    },
+    "noise_scenarios": {
+      "type": "array",
+      "description": "Noise-only scenarios that are NOT part of the core sub_scenarios. These are unrelated workplace events/activities generated based on noise_level.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique ID for this noise scenario"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of noise scenario"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "ISO datetime string for when this noise scenario occurs"
+          },
+          "start_time": {
+            "type": "string",
+            "description": "ISO datetime string for start time (if applicable)"
+          },
+          "end_time": {
+            "type": "string",
+            "description": "ISO datetime string for end time (if applicable)"
+          },
+          "participants": {
+            "type": "array",
+            "description": "List of participants (person IDs or objects with id/email)"
+          },
+          "event_description": {
+            "type": "string",
+            "description": "Description of the noise scenario"
+          },
+          "seed": {
+            "type": "string",
+            "description": "Seed identifier for data generation"
+          }
+        }
+      }
     }
   }
 }
