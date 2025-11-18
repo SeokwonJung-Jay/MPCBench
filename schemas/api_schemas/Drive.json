@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "methods": {
+      "type": "object",
+      "properties": {
+        "gdrive_search": {
+          "type": "object",
+          "properties": {
+            "arguments": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "description": "Search query (e.g., file name or content search)"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "File name to search for"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "files": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "mimeType": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "gdrive_read_file": {
+          "type": "object",
+          "properties": {
+            "arguments": {
+              "type": "object",
+              "required": ["file_id"],
+              "properties": {
+                "file_id": {
+                  "type": "string",
+                  "description": "Google Drive file ID"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

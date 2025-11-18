@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "methods": {
+      "type": "object",
+      "properties": {
+        "SearchIssuesWithJql": {
+          "type": "object",
+          "properties": {
+            "arguments": {
+              "type": "object",
+              "required": ["jql"],
+              "properties": {
+                "jql": {
+                  "type": "string",
+                  "description": "JQL query string (e.g., 'project = APP AND text ~ \"feature X\" ORDER BY updated DESC')"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "issues": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "updated": {
+                        "type": "string"
+                      },
+                      "fixVersions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "releaseDate": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

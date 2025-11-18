@@ -1,0 +1,104 @@
+{
+  "scenario_id": "scenario_A",
+  "description": "Company A workplace scenario with API launch project, team collaboration, and customer interactions",
+  "noise_level": 0.5,
+  "depth": 0.5,
+  "global_settings": {
+    "timezone": "Asia/Seoul",
+    "workday_start": "09:00",
+    "workday_end": "18:00"
+  },
+  "org_units": [
+    "Engineering",
+    "Product"
+  ],
+  "people": [
+    {
+      "id": "person_tom",
+      "name": "Tom Park",
+      "email": "tom@partner.co",
+      "team": "Product",
+      "role": "PM"
+    },
+    {
+      "id": "person_alice",
+      "name": "Alice Kim",
+      "email": "alice.kim@company.com",
+      "team": "Engineering",
+      "role": "Senior Engineer"
+    },
+    {
+      "id": "person_min",
+      "name": "Min Lee",
+      "email": "min.lee@company.com",
+      "team": "Engineering",
+      "role": "Engineer"
+    },
+    {
+      "id": "person_pm",
+      "name": "Dana Choi",
+      "email": "dana.choi@company.com",
+      "team": "Product",
+      "role": "Lead PM"
+    }
+  ],
+  "projects": [
+    {
+      "project_key": "APP",
+      "name": "API Launch",
+      "milestones": [
+        {
+          "name": "Design Review",
+          "date": "2025-11-10"
+        },
+        {
+          "name": "QA",
+          "date": "2025-11-15"
+        },
+        {
+          "name": "Launch",
+          "date": "2025-11-28"
+        }
+      ],
+      "jira_seeds": [
+        {
+          "issue_key": "APP-410",
+          "summary": "Optimize API",
+          "status": "Done"
+        },
+        {
+          "issue_key": "APP-412",
+          "summary": "Feature X rollout",
+          "status": "In QA"
+        }
+      ]
+    }
+  ],
+  "sub_scenarios": [
+    {
+      "id": "planning_meeting",
+      "type": "planning_meeting",
+      "abstract_description": "Tom wants to have a sync meeting next week with Alice and Min about the API launch.",
+      "participants_hint": ["Tom", "Alice", "Min"],
+      "constraints_hint": {
+        "approx_duration_minutes": 45,
+        "time_window": "next_week_working_hours"
+      }
+    },
+    {
+      "id": "feature_rollout_eta",
+      "type": "feature_rollout_eta",
+      "abstract_description": "A customer asks about the ETA of Feature X which is tracked in Jira.",
+      "issue_key_hint": "APP-412"
+    },
+    {
+      "id": "weekly_report",
+      "type": "weekly_report",
+      "abstract_description": "PM summarizes weekly wins such as latency -20% and users +8% WoW.",
+      "metrics_hint": {
+        "latency_reduction_percent": 20,
+        "users_growth_percent": 8
+      }
+    }
+  ]
+}

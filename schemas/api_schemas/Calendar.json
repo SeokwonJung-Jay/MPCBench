@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "methods": {
+      "type": "object",
+      "properties": {
+        "FindTimeSlotsWhenEveryoneIsFree": {
+          "type": "object",
+          "properties": {
+            "arguments": {
+              "type": "object",
+              "required": ["email_addresses", "date_range_start", "date_range_end", "workday_start_time", "workday_end_time", "slot_minimum_minutes"],
+              "properties": {
+                "email_addresses": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "List of participant email addresses"
+                },
+                "date_range_start": {
+                  "type": "string",
+                  "description": "Start date (ISO date format)"
+                },
+                "date_range_end": {
+                  "type": "string",
+                  "description": "End date (ISO date format)"
+                },
+                "workday_start_time": {
+                  "type": "string",
+                  "description": "Workday start time (e.g., '09:00')"
+                },
+                "workday_end_time": {
+                  "type": "string",
+                  "description": "Workday end time (e.g., '18:00')"
+                },
+                "slot_minimum_minutes": {
+                  "type": "integer",
+                  "description": "Minimum slot duration in minutes"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "time_slots": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "string"
+                      },
+                      "end": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ListEvents": {
+          "type": "object",
+          "properties": {
+            "arguments": {
+              "type": "object",
+              "properties": {
+                "min_date": {
+                  "type": "string",
+                  "description": "Minimum date (ISO date format)"
+                },
+                "max_date": {
+                  "type": "string",
+                  "description": "Maximum date (ISO date format)"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "events": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "start": {
+                        "type": "string"
+                      },
+                      "end": {
+                        "type": "string"
+                      },
+                      "attendees": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "email": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

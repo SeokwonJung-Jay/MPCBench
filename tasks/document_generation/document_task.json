@@ -1,0 +1,37 @@
+{
+  "task_id": "companyA_weekly_report_v1",
+  "user_prompt": "Please draft a weekly team report summarizing this week's work.",
+  "data_dependencies": {
+    "weekly_event_id": "event_weekly_summary",
+    "window_start": "2025-11-09",
+    "window_end": "2025-11-16"
+  },
+  "expected_tool_sequence": [
+    {
+      "tool_name": "Jira.SearchIssuesWithJql",
+      "description": "Fetch issues in project APP that were updated within the weekly window (2025-11-09 to 2025-11-16) using a JQL query with date filters."
+    },
+    {
+      "tool_name": "Slack.search_messages",
+      "description": "Retrieve weekly summary messages from the '#team-weekly' channel that contain words like 'summary', 'recap', or 'wins', or appear as threaded recaps."
+    },
+    {
+      "tool_name": "GoogleDrive.gdrive_search",
+      "description": "Find the weekly report template document by searching for a file named 'Weekly Report Template.docx' or similar team OKR document."
+    },
+    {
+      "tool_name": "GoogleDrive.gdrive_read_file",
+      "description": "Read the template file to obtain its structure, including sections such as 'Goals', 'Key Results', 'Highlights', 'Risks', and 'Next Week'."
+    },
+    {
+      "tool_name": "GoogleCalendar.ListEvents",
+      "description": "List meetings and events within the weekly window (min_date: 2025-11-09, max_date: 2025-11-16) to identify significant meetings like 'API Performance Review'."
+    }
+  ],
+  "answer_requirements": [
+    "The report follows a clear section structure inspired by the weekly report template (for example, distinct parts for goals, key results, highlights, risks, and next week or an obviously similar structure).",
+    "The report summarizes the main work items and progress from the tracking system over the target week, rather than generic or invented progress.",
+    "The report incorporates key metrics or highlights mentioned in the weekly summary communication (for example, performance or user metrics that were explicitly reported).",
+    "The report references important meetings from the calendar that occurred during the week when relevant, and connects them to the team's work."
+  ]
+}

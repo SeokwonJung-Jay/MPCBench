@@ -1,0 +1,180 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["company", "people", "projects", "timeline_events", "artifacts"],
+  "properties": {
+    "company": {
+      "type": "object",
+      "required": ["name", "timezone"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      }
+    },
+    "people": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "email", "team", "role"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "team": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "collaborators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          }
+        }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["project_key", "name"],
+        "properties": {
+          "project_key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "date"],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "date": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "jira_seeds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["issue_key", "summary", "status"],
+              "properties": {
+                "issue_key": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "timeline_events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "timestamp", "type", "links"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["meeting_request", "jira_update", "weekly_summary"]
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "issue_key": {
+            "type": "string"
+          },
+          "release_target": {
+            "type": "string"
+          },
+          "description_seed": {
+            "type": "string"
+          },
+          "links": {
+            "type": "object",
+            "required": ["affects_slack", "affects_calendar", "affects_contacts", "affects_jira", "affects_gmail", "affects_drive"],
+            "properties": {
+              "affects_slack": {
+                "type": "boolean"
+              },
+              "affects_calendar": {
+                "type": "boolean"
+              },
+              "affects_contacts": {
+                "type": "boolean"
+              },
+              "affects_jira": {
+                "type": "boolean"
+              },
+              "affects_gmail": {
+                "type": "boolean"
+              },
+              "affects_drive": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "required": ["drive_files"],
+      "properties": {
+        "drive_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "category"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
