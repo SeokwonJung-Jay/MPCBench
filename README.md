@@ -43,8 +43,8 @@ python3 -m generator.run_generation --scenario-id scenario_A
 
 #### generate response of target LLM
 
-python3 -m evaluation.run_single_task  --scenario-id scenario_A --task tasks/planning/planning_task.json --agent-model gpt-4o-mini
+python3 -m evaluation.run_single_task  --scenario-id scenario_A --task tasks/planning/planning_task.json 
 
-#### evaluate the response
+#### generate and evaluate the response
 
 python3 -m evaluation.run_task_and_judge  --scenario-id scenario_A --task tasks/planning/planning_task.json --agent-model gpt-4o-mini --judge-model gpt-4o-mini
