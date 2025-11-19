@@ -14,6 +14,7 @@ from evaluation.judge_runner import run_judge
 
 def run_task_and_judge(
     task_path: str,
+    scenario_id: str,
     agent_models: List[str],
     judge_models: List[str],
 ) -> Dict[str, Any]:
@@ -25,6 +26,7 @@ def run_task_and_judge(
     
     Args:
         task_path: Path to task JSON file
+        scenario_id: Scenario identifier (required)
         agent_models: List of OpenAI model names for the agent (tool-using model A)
         judge_models: List of OpenAI model names for the judge (model B)
         
@@ -37,6 +39,7 @@ def run_task_and_judge(
         # 1) Run agent
         log_path = run_single_task(
             task_path=task_path,
+            scenario_id=scenario_id,
             output_log_path=None,  # Will use default with model name
             agent_model=agent_model
         )
@@ -62,7 +65,7 @@ def run_task_and_judge(
             build_judge_input_from_log_and_save(str(log_path_obj), str(judge_input_path))
             
             # 3) Run judge (Model B)
-            scores = run_judge(str(judge_input_path), model=judge_model)
+            scores = run_judge(str(judge_input_path), model=judge_model, agent_model=agent_model)
             
             # 4) Save judge_result file with model names
             result_path = log_path_obj.parent / (
@@ -105,6 +108,12 @@ def main() -> None:
         default="model_config.json",
         help="Path to a JSON file specifying agent_models and judge_models (default: model_config.json at repo root).",
     )
+    parser.add_argument(
+        "--scenario-id",
+        type=str,
+        required=True,
+        help="Scenario identifier (e.g., scenario_A). Required.",
+    )
     args = parser.parse_args()
     
     # Load model config from JSON file
@@ -132,6 +141,7 @@ def main() -> None:
     
     run_task_and_judge(
         task_path=args.task,
+        scenario_id=args.scenario_id,
         agent_models=agent_models,
         judge_models=judge_models,
     )

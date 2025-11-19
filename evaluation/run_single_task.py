@@ -36,7 +36,7 @@ def save_run_log(log: Dict[str, Any], output_path: str) -> None:
         json.dump(log, f, indent=2, ensure_ascii=False)
 
 
-def run_single_task(task_path: str, output_log_path: str = None, agent_model: str = "gpt-4o-mini") -> str:
+def run_single_task(task_path: str, scenario_id: str, output_log_path: str = None, agent_model: str = "gpt-4o-mini") -> str:
     """
     Run a single task and save the run log.
     
@@ -44,6 +44,7 @@ def run_single_task(task_path: str, output_log_path: str = None, agent_model: st
     
     Args:
         task_path: Path to the task JSON file
+        scenario_id: Scenario identifier (required)
         output_log_path: Path where the run log should be saved (default: evaluation/logs/{task_id}__agent-{model}_run.json)
         agent_model: OpenAI model name for the agent (default: "gpt-4o-mini")
         
@@ -92,14 +93,14 @@ def run_single_task(task_path: str, output_log_path: str = None, agent_model: st
     print(f"[run_single_task] Run log will be saved to: {output_path_obj}")
     
     # Run with OpenAI agent (generic, works for all task types)
-    # Use scenario_A as default (can be made configurable later)
     data_root = "data"
-    print(f"[run_single_task] Executing agent with data_root={data_root}, model={agent_model}")
+    print(f"[run_single_task] Executing agent with data_root={data_root}, scenario_id={scenario_id}, model={agent_model}")
     print(f"[run_single_task] Running OpenAI agent with tool calling...")
     
     log = run_task_with_openai(
         task=task,
         data_root=data_root,
+        scenario_id=scenario_id,
         model=agent_model,
     )
     
@@ -139,6 +140,12 @@ def main() -> None:
         default="gpt-4o-mini",
         help="OpenAI model name for the agent (tool-using model).",
     )
+    parser.add_argument(
+        "--scenario-id",
+        type=str,
+        required=True,
+        help="Scenario identifier (e.g., scenario_A). Required.",
+    )
     
     args = parser.parse_args()
     task_path = args.task
@@ -146,6 +153,7 @@ def main() -> None:
     # Run the task
     output_log_path = run_single_task(
         task_path=task_path,
+        scenario_id=args.scenario_id,
         output_log_path=args.output,
         agent_model=args.agent_model,
     )

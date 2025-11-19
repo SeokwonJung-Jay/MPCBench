@@ -10,6 +10,8 @@ try:
 except ImportError:
     OpenAI = None
 
+from common.log_utils import log_llm_run, build_llm_log_payload
+
 
 
 
@@ -31,7 +33,7 @@ def load_judge_input(path: str) -> Dict[str, Any]:
         return json.load(f)
 
 
-def run_judge(input_path: str, model: str = "gpt-4o-mini") -> Dict[str, Any]:
+def run_judge(input_path: str, model: str = "gpt-4o-mini", agent_model: str = None) -> Dict[str, Any]:
     """
     Programmatic wrapper: load judge input from file and run judge model.
     
@@ -41,6 +43,7 @@ def run_judge(input_path: str, model: str = "gpt-4o-mini") -> Dict[str, Any]:
     Args:
         input_path: Path to judge input JSON file
         model: OpenAI model name (default: "gpt-4o-mini")
+        agent_model: Agent model name (for logging purposes, optional)
         
     Returns:
         Dict with scoring results:
@@ -54,10 +57,10 @@ def run_judge(input_path: str, model: str = "gpt-4o-mini") -> Dict[str, Any]:
     judge_input = load_judge_input(input_path)
     
     # Call judge model
-    return call_judge_model(model, judge_input)
+    return call_judge_model(model, judge_input, agent_model=agent_model)
 
 
-def call_judge_model(model: str, judge_input: Dict[str, Any]) -> Dict[str, Any]:
+def call_judge_model(model: str, judge_input: Dict[str, Any], agent_model: str = None) -> Dict[str, Any]:
     """
     Call the OpenAI judge model to score a response.
     
@@ -99,12 +102,35 @@ def call_judge_model(model: str, judge_input: Dict[str, Any]) -> Dict[str, Any]:
         {"role": "user", "content": user_content}
     ]
     
+    # Set up LLM logging directory
+    repo_root = Path(__file__).resolve().parent.parent
+    llm_log_dir = repo_root / "evaluation" / "logs" / "llm" / "judge"
+    safe_judge_model = model.replace("/", "-").replace(":", "-").replace(" ", "_")
+    task_id = judge_input.get("task_id", "unknown")
+    
     # Call OpenAI
     response = client.chat.completions.create(
         model=model,
         messages=messages,
         temperature=0.0
     )
+    
+    # Log this LLM call
+    if agent_model:
+        safe_agent_model = agent_model.replace("/", "-").replace(":", "-").replace(" ", "_")
+        log_file_name = f"{task_id}__agent-{safe_agent_model}__judge-{safe_judge_model}__llm.json"
+    else:
+        log_file_name = f"{task_id}__judge-{safe_judge_model}__llm.json"
+    
+    log_payload = build_llm_log_payload(
+        model=model,
+        component="judge",
+        messages=messages,
+        response=response,
+        task_id=task_id,
+        extra_params={"temperature": 0.0},
+    )
+    log_llm_run(llm_log_dir, log_file_name, log_payload)
     
     # Extract assistant message content
     assistant_message = response.choices[0].message.content

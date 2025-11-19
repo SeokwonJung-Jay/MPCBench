@@ -10,6 +10,8 @@ try:
 except ImportError:
     OpenAI = None
 
+from common.log_utils import log_llm_run, build_llm_log_payload
+
 
 
 def load_env_file(env_path: Path = None) -> None:
@@ -119,16 +121,33 @@ def generate_world_state(scenario_id: str = "scenario_A") -> Dict[str, Any]:
         depth_desc=depth_desc
     )
 
+    # Set up LLM logging directory
+    repo_root = Path(__file__).resolve().parent.parent
+    llm_log_dir = repo_root / "generator" / "logs" / "llm"
+    
     # Call LLM
     print(f"[world_state_generator] Calling LLM to generate world_state...")
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
     response = client.chat.completions.create(
         model=data_generation_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
+        messages=messages,
         temperature=0.7,
     )
+    
+    # Log this LLM call
+    log_payload = build_llm_log_payload(
+        model=data_generation_model,
+        component="world_state_generator",
+        messages=messages,
+        response=response,
+        scenario_id=scenario_id,
+        extra_params={"temperature": 0.7},
+    )
+    log_file_name = f"{scenario_id}__world_state__llm.json"
+    log_llm_run(llm_log_dir, log_file_name, log_payload)
     
     # Extract response
     content = response.choices[0].message.content.strip()

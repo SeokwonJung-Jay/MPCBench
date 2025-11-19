@@ -10,6 +10,8 @@ try:
 except ImportError:
     OpenAI = None
 
+from common.log_utils import log_llm_run, build_llm_log_payload
+
 
 
 def load_env_file(env_path: Path = None) -> None:
@@ -70,7 +72,9 @@ def generate_drive_data(world_state: Dict[str, Any], data_generation_model: str 
         if not data_generation_model:
             raise ValueError("data_generation_model (or world_state_model) not specified in model_config.json")
     
-    scenario_id = world_state.get("scenario_id", "scenario_A")
+    scenario_id = world_state.get("scenario_id")
+    if not scenario_id:
+        raise ValueError("world_state must contain 'scenario_id' field")
     print(f"[drive_generator] Start: scenario_id={scenario_id}, model={data_generation_model}")
     
     # Load schema
@@ -116,16 +120,33 @@ def generate_drive_data(world_state: Dict[str, Any], data_generation_model: str 
     # Initialize OpenAI client
     client = OpenAI()
     
+    # Set up LLM logging directory
+    repo_root = Path(__file__).resolve().parent.parent
+    llm_log_dir = repo_root / "generator" / "logs" / "llm"
+    
     # Call LLM
     print(f"[drive_generator] Calling LLM to generate Drive data...")
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
     response = client.chat.completions.create(
         model=data_generation_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
+        messages=messages,
         temperature=0.7,
     )
+    
+    # Log this LLM call
+    log_payload = build_llm_log_payload(
+        model=data_generation_model,
+        component="drive_generator",
+        messages=messages,
+        response=response,
+        scenario_id=scenario_id,
+        extra_params={"temperature": 0.7},
+    )
+    log_file_name = f"{scenario_id}__drive__llm.json"
+    log_llm_run(llm_log_dir, log_file_name, log_payload)
     
     # Extract and parse response
     content = response.choices[0].message.content.strip()

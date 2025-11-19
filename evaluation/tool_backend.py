@@ -9,18 +9,23 @@ class ToolBackend:
     """
     Backend for executing tool calls against local JSON data files.
     
-    Reads from generated data files (e.g., data/scenario_A_*.json) and performs
+    Reads from generated data files (e.g., data/{scenario_id}_*.json) and performs
     scenario-agnostic operations. No hardcoded scenario-specific behavior.
     """
     
-    def __init__(self, data_root: str = "data", scenario_id: str = "scenario_A"):
+    def __init__(self, data_root: str = "data", scenario_id: str = None):
         """
         Initialize the tool backend.
         
         Args:
             data_root: Path to the data directory (default: "data")
-            scenario_id: Scenario identifier (default: "scenario_A")
+            scenario_id: Scenario identifier (required, no default)
+            
+        Raises:
+            ValueError: If scenario_id is not provided
         """
+        if not scenario_id:
+            raise ValueError("scenario_id is required and cannot be None or empty")
         self.data_root = Path(data_root)
         self.scenario_id = scenario_id
         self._slack_data = None

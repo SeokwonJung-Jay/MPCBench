@@ -11,6 +11,7 @@ except ImportError:
     OpenAI = None
 
 from evaluation.tool_backend import ToolBackend
+from common.log_utils import log_llm_run, build_llm_log_payload
 
 
 def load_env_file(env_path: Path = None) -> None:
@@ -309,6 +310,7 @@ def map_function_name_to_backend_tool_name(function_name: str) -> str:
 def run_task_with_openai(
     task: Dict[str, Any],
     data_root: str,
+    scenario_id: str,
     model: str = "gpt-4o-mini",
     max_tool_rounds: int = 4,
 ) -> Dict[str, Any]:
@@ -319,7 +321,8 @@ def run_task_with_openai(
     
     Args:
         task: Task dictionary with task_id and user_prompt
-        data_root: Path to data directory (default: "data", uses scenario_A by default)
+        data_root: Path to data directory (default: "data")
+        scenario_id: Scenario identifier (required, no default)
         model: OpenAI model name (default: "gpt-4o-mini")
         max_tool_rounds: Maximum number of tool-calling rounds (default: 4)
         
@@ -329,22 +332,19 @@ def run_task_with_openai(
         
     Raises:
         ImportError: If OpenAI library is not installed
-        ValueError: If OpenAI API key is not set
+        ValueError: If OpenAI API key is not set or scenario_id is missing
     """
     if OpenAI is None:
         raise ImportError("OpenAI library is not installed. Install it with: pip install openai")
+    
+    if not scenario_id:
+        raise ValueError("scenario_id is required and cannot be empty")
     
     # Load environment variables from .env file
     load_env_file()
     
     # Initialize OpenAI client and tool backend
     client = OpenAI()
-    # Extract scenario_id from data_root if it's in path format, otherwise default to scenario_A
-    if "/" in data_root:
-        scenario_id = Path(data_root).name.replace("company_", "scenario_")
-    else:
-        scenario_id = "scenario_A"
-        data_root = "data"
     backend = ToolBackend(data_root=data_root, scenario_id=scenario_id)
     tools = build_all_tools_spec()
     
@@ -352,8 +352,13 @@ def run_task_with_openai(
     user_prompt = task["user_prompt"]
     task_type = task.get("task_type", "")
     
+    # Set up LLM logging directory
+    repo_root = Path(__file__).resolve().parent.parent
+    llm_log_dir = repo_root / "evaluation" / "logs" / "llm" / "agent"
+    safe_model = model.replace("/", "-").replace(":", "-").replace(" ", "_")
+    
     # Log start of agent run
-    print(f"[openai_agent_runner] Start: task_id={task_id}, task_type={task_type}, model={model}, data_root={data_root}")
+    print(f"[openai_agent_runner] Start: task_id={task_id}, task_type={task_type}, model={model}, data_root={data_root}, scenario_id={scenario_id}")
     
     # Load context files from llm_context
     base_dir = Path(__file__).resolve().parent.parent / "llm_context"
@@ -408,6 +413,22 @@ def run_task_with_openai(
             tool_choice="auto",
             temperature=0.0,
         )
+        
+        # Log this LLM call
+        log_payload = build_llm_log_payload(
+            model=model,
+            component="agent",
+            messages=messages,
+            response=completion,
+            scenario_id=scenario_id,
+            task_id=task_id,
+            step_index=step_count,
+            tools=tools,
+            tool_choice="auto",
+            extra_params={"temperature": 0.0},
+        )
+        log_file_name = f"{task_id}__agent-{safe_model}__step-{step_count:02d}.json"
+        log_llm_run(llm_log_dir, log_file_name, log_payload)
         
         msg = completion.choices[0].message
         
