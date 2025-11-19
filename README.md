@@ -1,15 +1,15 @@
-## overall flow
+## Overall Flow
 
-### Data synthesis
+### Data Synthesis
 
 [1] Scenario (human-authored spec)
     - Role:
       High-level story and configuration written by a human:
       who is involved, what’s happening, when, and how noisy/complex it should be.
 
-           │
-           │  (LLM: data_generation_model)
-           ▼
+   │
+   │  (LLM: data_generation_model)
+   ▼
 
 [2] World state 
     - Role:
@@ -17,9 +17,9 @@
       people, projects, and expanded sub-scenarios + noise events
       organized into a consistent internal state.
 
-           │
-           │  (LLM: data_generation_model)
-           ▼
+   │
+   │  (LLM: data_generation_model)
+   ▼
 
 [3] Per-source data 
     - Role:
