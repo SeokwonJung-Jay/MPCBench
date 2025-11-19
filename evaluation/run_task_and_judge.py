@@ -102,17 +102,28 @@ def main() -> None:
     parser.add_argument(
         "--model-config",
         type=str,
-        default="evaluation/model_config.json",
-        help="Path to a JSON file specifying agent_models and judge_models.",
+        default="model_config.json",
+        help="Path to a JSON file specifying agent_models and judge_models (default: model_config.json at repo root).",
     )
     args = parser.parse_args()
     
-    # Load model config using unified config module
-    from model_config import get_agent_models, get_judge_models
+    # Load model config from JSON file
+    if args.model_config == "model_config.json":
+        # Default: use model_config.json at repo root
+        repo_root = Path(__file__).resolve().parent.parent
+        config_path = repo_root / "model_config.json"
+    else:
+        # Custom path provided
+        config_path = Path(args.model_config)
     
-    model_config_path = Path(args.model_config) if args.model_config != "evaluation/model_config.json" else None
-    agent_models: List[str] = get_agent_models(model_config_path)
-    judge_models: List[str] = get_judge_models(model_config_path)
+    if not config_path.exists():
+        raise FileNotFoundError(f"Model config file not found: {config_path}")
+    
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    
+    agent_models: List[str] = config.get("agent_models", [])
+    judge_models: List[str] = config.get("judge_models", [])
     
     if not agent_models:
         raise ValueError("No agent_models specified in model_config.")

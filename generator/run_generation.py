@@ -4,7 +4,6 @@ import argparse
 import json
 from pathlib import Path
 
-from model_config import get_data_generation_model
 from generator.slack_generator import generate_slack_data
 from generator.gmail_generator import generate_gmail_data
 from generator.calendar_generator import generate_calendar_data
@@ -48,8 +47,16 @@ def main():
     noise_scenarios_count = len(world_state.get("noise_scenarios", []))
     print(f"[run_generation] Loaded world_state: scenario_id={loaded_scenario_id}, people={people_count}, sub_scenarios_expanded={sub_scenarios_expanded_count}, noise_scenarios={noise_scenarios_count}")
     
-    # Load data_generation_model
-    data_generation_model = get_data_generation_model()
+    # Load data_generation_model from model_config.json at repo root
+    repo_root = Path(__file__).resolve().parent.parent
+    config_path = repo_root / "model_config.json"
+    if not config_path.exists():
+        raise FileNotFoundError(f"Model config file not found: {config_path}")
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    data_generation_model = config.get("data_generation_model") or config.get("world_state_model")
+    if not data_generation_model:
+        raise ValueError("data_generation_model (or world_state_model) not specified in model_config.json")
     print(f"[run_generation] Using data_generation_model: {data_generation_model}")
     
     # Generate data for each source using LLM directly

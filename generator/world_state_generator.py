@@ -10,7 +10,6 @@ try:
 except ImportError:
     OpenAI = None
 
-from model_config import get_data_generation_model
 
 
 def load_env_file(env_path: Path = None) -> None:
@@ -81,8 +80,16 @@ def generate_world_state(scenario_id: str = "scenario_A") -> Dict[str, Any]:
     base_sub_scenarios_count = len(scenario.get('sub_scenarios', []))
     print(f"[world_state_generator] Start building world_state for scenario_id={scenario_id}, noise_level={noise_level}, depth={depth}, base_sub_scenarios={base_sub_scenarios_count}")
     
-    # Load data_generation_model
-    data_generation_model = get_data_generation_model()
+    # Load data_generation_model from model_config.json at repo root
+    repo_root = Path(__file__).resolve().parent.parent
+    config_path = repo_root / "model_config.json"
+    if not config_path.exists():
+        raise FileNotFoundError(f"Model config file not found: {config_path}")
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    data_generation_model = config.get("data_generation_model") or config.get("world_state_model")
+    if not data_generation_model:
+        raise ValueError("data_generation_model (or world_state_model) not specified in model_config.json")
     print(f"[world_state_generator] Using model: {data_generation_model}")
     
     # Initialize OpenAI client
