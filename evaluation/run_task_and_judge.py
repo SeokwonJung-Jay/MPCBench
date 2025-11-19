@@ -107,16 +107,12 @@ def main() -> None:
     )
     args = parser.parse_args()
     
-    # Load model config
-    model_config_path = Path(args.model_config)
-    if not model_config_path.exists():
-        raise FileNotFoundError(f"Model config file not found: {model_config_path}")
+    # Load model config using unified config module
+    from model_config import get_agent_models, get_judge_models
     
-    with model_config_path.open("r", encoding="utf-8") as f:
-        cfg = json.load(f)
-    
-    agent_models: List[str] = cfg.get("agent_models", [])
-    judge_models: List[str] = cfg.get("judge_models", [])
+    model_config_path = Path(args.model_config) if args.model_config != "evaluation/model_config.json" else None
+    agent_models: List[str] = get_agent_models(model_config_path)
+    judge_models: List[str] = get_judge_models(model_config_path)
     
     if not agent_models:
         raise ValueError("No agent_models specified in model_config.")

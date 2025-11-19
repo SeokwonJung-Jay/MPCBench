@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["company", "people", "projects", "timeline_events", "artifacts"],
+  "required": ["scenario_id", "people"],
   "properties": {
     "company": {
       "type": "object",

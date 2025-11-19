@@ -10,7 +10,7 @@ try:
 except ImportError:
     OpenAI = None
 
-from generator.model_config import load_world_state_model
+from model_config import get_data_generation_model
 
 
 def load_env_file(env_path: Path = None) -> None:
@@ -51,15 +51,15 @@ def generate_world_state(scenario_id: str = "scenario_A") -> Dict[str, Any]:
     Generate world_state from scenario using LLM.
     
     The LLM is responsible for:
-    - Enriching abstract sub_scenarios into concrete timeline events
-    - Creating per_source_plans for each data source
-    - Incorporating noise_level and depth parameters
+    - Enriching abstract sub_scenarios into concrete expanded scenarios
+    - Creating noise_scenarios based on noise_level
+    - Incorporating depth parameters for scenario complexity
     
     Args:
         scenario_id: Scenario identifier (e.g., "scenario_A")
         
     Returns:
-        dict: The generated world_state dictionary
+        dict: The generated world_state dictionary (scenario-centric, no per_source_plans)
     """
     if OpenAI is None:
         raise ImportError("OpenAI library is not installed. Install it with: pip install openai")
@@ -81,9 +81,9 @@ def generate_world_state(scenario_id: str = "scenario_A") -> Dict[str, Any]:
     base_sub_scenarios_count = len(scenario.get('sub_scenarios', []))
     print(f"[world_state_generator] Start building world_state for scenario_id={scenario_id}, noise_level={noise_level}, depth={depth}, base_sub_scenarios={base_sub_scenarios_count}")
     
-    # Load world_state_model
-    world_state_model = load_world_state_model()
-    print(f"[world_state_generator] Using model: {world_state_model}")
+    # Load data_generation_model
+    data_generation_model = get_data_generation_model()
+    print(f"[world_state_generator] Using model: {data_generation_model}")
     
     # Initialize OpenAI client
     client = OpenAI()
@@ -103,13 +103,8 @@ The world_state should include:
    - These should be realistic but unrelated workplace events/messages/activities
    - Each noise scenario should have similar structure to sub_scenarios_expanded (id, type, timestamps, participants, etc.)
    - The number of noise scenarios should scale with the noise_level parameter
-4. per_source_plans: A structure with plans for each data source:
-   - slack_plans: List of plans for Slack messages (may include both sub-scenario and noise plans)
-   - gmail_plans: List of plans for email threads (may include both sub-scenario and noise plans)
-   - calendar_plans: List of plans for calendar events (may include both sub-scenario and noise plans)
-   - contacts_plans: List of plans for contacts (may include both sub-scenario and noise plans)
-   - jira_plans: List of plans for Jira issues (may include both sub-scenario and noise plans)
-   - drive_plans: List of plans for Drive files (may include both sub-scenario and noise plans)
+
+IMPORTANT: Do NOT include per_source_plans in the world_state. The world_state is scenario-centric only.
 
 IMPORTANT PARAMETERS:
 - noise_level (0-1): Controls amount of unrelated/off-task data
@@ -138,7 +133,7 @@ Output the complete world_state JSON now."""
     # Call LLM
     print(f"[world_state_generator] Calling LLM to generate world_state...")
     response = client.chat.completions.create(
-        model=world_state_model,
+        model=data_generation_model,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -166,10 +161,16 @@ Output the complete world_state JSON now."""
         raise ValueError(f"Failed to parse LLM response as JSON: {e}\nResponse was: {content[:500]}")
     
     # Basic validation
-    required_keys = ["scenario_id", "people", "per_source_plans"]
+    required_keys = ["scenario_id", "people"]
     for key in required_keys:
         if key not in world_state:
             raise ValueError(f"Generated world_state missing required key: {key}")
+    
+    # Remove per_source_plans if present (should not be in scenario-centric world_state)
+    if "per_source_plans" in world_state:
+        print(f"[world_state_generator] Warning: Removing per_source_plans from world_state (should be scenario-centric only)")
+        del world_state["per_source_plans"]
+    
     print(f"[world_state_generator] Basic validation passed: required keys present")
     
     # Ensure scenario metadata is preserved
@@ -249,11 +250,9 @@ Output the complete world_state JSON now."""
     world_state_keys = list(world_state.keys())
     people_count = len(world_state.get("people", []))
     projects_count = len(world_state.get("projects", []))
-    per_source_plans = world_state.get("per_source_plans", {})
-    plans_summary = {k: len(v) if isinstance(v, list) else "N/A" for k, v in per_source_plans.items()}
     
     print(f"[world_state_generator] world_state keys: {world_state_keys}")
-    print(f"[world_state_generator] Summary: people={people_count}, projects={projects_count}, sub_scenarios_expanded={sub_expanded_count}, noise_scenarios={noise_count}, per_source_plans={plans_summary}")
+    print(f"[world_state_generator] Summary: people={people_count}, projects={projects_count}, sub_scenarios_expanded={sub_expanded_count}, noise_scenarios={noise_count}")
     
     # Write to output file
     output_path = Path(f"data/{scenario_id}_world_state.json")
