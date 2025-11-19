@@ -7,9 +7,9 @@
       High-level story and configuration written by a human:
       who is involved, what’s happening, when, and how noisy/complex it should be.
 
-   │
-   │  (LLM: data_generation_model)
-   ▼
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│  (LLM: model_config.data_generation_model)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼
 
 [2] World state 
     - Role:
@@ -17,9 +17,9 @@
       people, projects, and expanded sub-scenarios + noise events
       organized into a consistent internal state.
 
-   │
-   │  (LLM: data_generation_model)
-   ▼
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│  (LLM: model_config.data_generation_model)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼
 
 [3] Per-source data 
     - Role:
