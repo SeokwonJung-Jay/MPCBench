@@ -95,47 +95,29 @@ def generate_world_state(scenario_id: str = "scenario_A") -> Dict[str, Any]:
     # Initialize OpenAI client
     client = OpenAI()
     
-    # Build system prompt
-    system_prompt = """You are a world state generator for a workplace benchmark. Your job is to transform an abstract scenario into a concrete, detailed world_state JSON.
-
-The world_state should include:
-1. All metadata from the scenario (scenario_id, description, noise_level, depth, global_settings, people, projects)
-2. sub_scenarios_expanded: For each abstract sub_scenario from the input scenario, create a concrete expanded version with:
-   - Concrete ISO datetime timestamps
-   - Specific participant IDs/emails
-   - Detailed event descriptions
-   - Any seeds needed for data generation
-   - This array should contain ONLY the expanded versions of the sub_scenarios listed in the input scenario
-3. noise_scenarios: An array of noise-only scenario objects that are NOT part of the core sub_scenarios:
-   - These should be realistic but unrelated workplace events/messages/activities
-   - Each noise scenario should have similar structure to sub_scenarios_expanded (id, type, timestamps, participants, etc.)
-   - The number of noise scenarios should scale with the noise_level parameter
-
-IMPORTANT: Do NOT include per_source_plans in the world_state. The world_state is scenario-centric only.
-
-IMPORTANT PARAMETERS:
-- noise_level (0-1): Controls amount of unrelated/off-task data
-  * 0 = almost no noise, only data directly relevant to sub_scenarios (noise_scenarios should be empty or minimal)
-  * 1 = lots of unrelated messages/events/files (still realistic) (noise_scenarios should contain many entries)
-- depth (0-1): Controls how indirect the evidence is
-  * 0 = sub_scenario realized directly (e.g., one clear Slack message)
-  * 1 = sub_scenario requires multi-step, multi-source chaining to infer
-  * Intermediate values interpolate behavior
-
-CRITICAL: sub_scenarios_expanded must correspond exactly to the sub_scenarios in the input scenario. All other unrelated scenarios should go in noise_scenarios.
-
-You must output ONLY valid JSON matching the world_state schema. Do not include markdown code fences."""
-
+    # Load prompt config
+    repo_root = Path(__file__).resolve().parent.parent
+    config_path = repo_root / "prompt_config.json"
+    with open(config_path, 'r', encoding='utf-8') as f:
+        prompt_config = json.load(f)
+    
+    ws_prompts = prompt_config["generator"]["world_state"]
+    system_prompt = ws_prompts["system_prompt"]
+    
     # Build user prompt with scenario
-    user_prompt = f"""Generate a world_state JSON from this scenario:
-
-{json.dumps(scenario, indent=2, ensure_ascii=False)}
-
-Remember:
-- noise_level={scenario.get('noise_level', 0)}: {'Generate minimal noise' if scenario.get('noise_level', 0) < 0.3 else 'Generate moderate noise' if scenario.get('noise_level', 0) < 0.7 else 'Generate significant noise'}
-- depth={scenario.get('depth', 0)}: {'Make evidence direct' if scenario.get('depth', 0) < 0.3 else 'Make evidence moderately indirect' if scenario.get('depth', 0) < 0.7 else 'Make evidence highly indirect, requiring multi-source chaining'}
-
-Output the complete world_state JSON now."""
+    scenario_json = json.dumps(scenario, indent=2, ensure_ascii=False)
+    noise_level = scenario.get('noise_level', 0)
+    depth = scenario.get('depth', 0)
+    noise_level_desc = 'Generate minimal noise' if noise_level < 0.3 else 'Generate moderate noise' if noise_level < 0.7 else 'Generate significant noise'
+    depth_desc = 'Make evidence direct' if depth < 0.3 else 'Make evidence moderately indirect' if depth < 0.7 else 'Make evidence highly indirect, requiring multi-source chaining'
+    
+    user_prompt = ws_prompts["user_prompt_template"].format(
+        scenario_json=scenario_json,
+        noise_level=noise_level,
+        noise_level_desc=noise_level_desc,
+        depth=depth,
+        depth_desc=depth_desc
+    )
 
     # Call LLM
     print(f"[world_state_generator] Calling LLM to generate world_state...")

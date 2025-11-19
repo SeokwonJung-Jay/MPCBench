@@ -85,42 +85,33 @@ def generate_jira_data(world_state: Dict[str, Any], data_generation_model: str =
     noise_level = world_state.get("noise_level", 0.0)
     depth = world_state.get("depth", 0.0)
     
-    # Build system prompt
-    system_prompt = """You are a Jira data generator for a workplace benchmark. Your job is to generate realistic Jira issue data based on scenario information.
-
-The output must be valid JSON matching the Jira schema with:
-- projects: array of {key, name, fixVersions[]}
-- issues: array of {key, summary, status, updated (optional), fixVersions[] (optional), project: {key}}
-
-Generate Jira issues that reflect:
-- Seed issues from projects.jira_seeds (must be included)
-- Events from sub_scenarios_expanded (core scenario events related to issues)
-- Events from noise_scenarios (unrelated workplace issues)
-- Respect noise_level: 0 = minimal noise, 1 = lots of unrelated issues
-- Respect depth: 0 = direct/obvious issue updates, 1 = indirect/multi-step issue tracking
-
-You must output ONLY valid JSON matching the schema. Do not include markdown code fences."""
-
+    # Load prompt config
+    repo_root = Path(__file__).resolve().parent.parent
+    config_path = repo_root / "prompt_config.json"
+    with open(config_path, 'r', encoding='utf-8') as f:
+        prompt_config = json.load(f)
+    
+    jira_prompts = prompt_config["generator"]["jira"]
+    system_prompt = jira_prompts["system_prompt"]
+    
     # Build user prompt
-    user_prompt = f"""Generate Jira issue data from this world_state:
-
-Projects (with jira_seeds that must be included):
-{json.dumps(projects, indent=2, ensure_ascii=False)}
-
-Sub-scenarios (core events):
-{json.dumps(sub_scenarios_expanded, indent=2, ensure_ascii=False)}
-
-Noise scenarios (unrelated events):
-{json.dumps(noise_scenarios, indent=2, ensure_ascii=False)}
-
-Parameters:
-- noise_level={noise_level}: {'Generate minimal noise' if noise_level < 0.3 else 'Generate moderate noise' if noise_level < 0.7 else 'Generate significant noise'}
-- depth={depth}: {'Make issue updates direct' if depth < 0.3 else 'Make issue updates moderately indirect' if depth < 0.7 else 'Make issue updates highly indirect, requiring multi-step chaining'}
-
-Target schema:
-{json.dumps(jira_schema, indent=2, ensure_ascii=False)}
-
-Output the complete Jira JSON now."""
+    projects_json = json.dumps(projects, indent=2, ensure_ascii=False)
+    sub_scenarios_expanded_json = json.dumps(sub_scenarios_expanded, indent=2, ensure_ascii=False)
+    noise_scenarios_json = json.dumps(noise_scenarios, indent=2, ensure_ascii=False)
+    jira_schema_json = json.dumps(jira_schema, indent=2, ensure_ascii=False)
+    noise_level_desc = 'Generate minimal noise' if noise_level < 0.3 else 'Generate moderate noise' if noise_level < 0.7 else 'Generate significant noise'
+    depth_desc = 'Make issue updates direct' if depth < 0.3 else 'Make issue updates moderately indirect' if depth < 0.7 else 'Make issue updates highly indirect, requiring multi-step chaining'
+    
+    user_prompt = jira_prompts["user_prompt_template"].format(
+        projects_json=projects_json,
+        sub_scenarios_expanded_json=sub_scenarios_expanded_json,
+        noise_scenarios_json=noise_scenarios_json,
+        noise_level=noise_level,
+        noise_level_desc=noise_level_desc,
+        depth=depth,
+        depth_desc=depth_desc,
+        jira_schema_json=jira_schema_json
+    )
 
     # Initialize OpenAI client
     client = OpenAI()

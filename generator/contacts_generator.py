@@ -83,35 +83,27 @@ def generate_contacts_data(world_state: Dict[str, Any], data_generation_model: s
     sub_scenarios_expanded = world_state.get("sub_scenarios_expanded", [])
     noise_scenarios = world_state.get("noise_scenarios", [])
     
-    # Build system prompt
-    system_prompt = """You are a Contacts data generator for a workplace benchmark. Your job is to generate realistic contact data based on scenario information.
-
-The output must be valid JSON matching the Contacts schema with:
-- contacts: array of {id, name, email, phone (optional), organization (optional)}
-
-Generate contacts that include:
-- All people from the world_state (required)
-- Any additional contacts mentioned in sub_scenarios_expanded or noise_scenarios
-- Ensure all participant IDs from scenarios have corresponding contacts
-
-You must output ONLY valid JSON matching the schema. Do not include markdown code fences."""
-
+    # Load prompt config
+    repo_root = Path(__file__).resolve().parent.parent
+    config_path = repo_root / "prompt_config.json"
+    with open(config_path, 'r', encoding='utf-8') as f:
+        prompt_config = json.load(f)
+    
+    contacts_prompts = prompt_config["generator"]["contacts"]
+    system_prompt = contacts_prompts["system_prompt"]
+    
     # Build user prompt
-    user_prompt = f"""Generate Contacts data from this world_state:
-
-People (must all be included as contacts):
-{json.dumps(people, indent=2, ensure_ascii=False)}
-
-Sub-scenarios (may reference additional participants):
-{json.dumps(sub_scenarios_expanded, indent=2, ensure_ascii=False)}
-
-Noise scenarios (may reference additional participants):
-{json.dumps(noise_scenarios, indent=2, ensure_ascii=False)}
-
-Target schema:
-{json.dumps(contacts_schema, indent=2, ensure_ascii=False)}
-
-Output the complete Contacts JSON now."""
+    people_json = json.dumps(people, indent=2, ensure_ascii=False)
+    sub_scenarios_expanded_json = json.dumps(sub_scenarios_expanded, indent=2, ensure_ascii=False)
+    noise_scenarios_json = json.dumps(noise_scenarios, indent=2, ensure_ascii=False)
+    contacts_schema_json = json.dumps(contacts_schema, indent=2, ensure_ascii=False)
+    
+    user_prompt = contacts_prompts["user_prompt_template"].format(
+        people_json=people_json,
+        sub_scenarios_expanded_json=sub_scenarios_expanded_json,
+        noise_scenarios_json=noise_scenarios_json,
+        contacts_schema_json=contacts_schema_json
+    )
 
     # Initialize OpenAI client
     client = OpenAI()

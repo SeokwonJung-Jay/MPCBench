@@ -85,43 +85,33 @@ def generate_slack_data(world_state: Dict[str, Any], data_generation_model: str 
     noise_level = world_state.get("noise_level", 0.0)
     depth = world_state.get("depth", 0.0)
     
-    # Build system prompt
-    system_prompt = """You are a Slack data generator for a workplace benchmark. Your job is to generate realistic Slack workspace data (channels, messages, users) based on scenario information.
-
-The output must be valid JSON matching the Slack schema with:
-- workspace_name: string
-- channels: array of {id, name}
-- messages: array of {id, channel_id, user_id, text, timestamp}
-- users: array of {id, name, email}
-
-Generate messages that reflect:
-- Events from sub_scenarios_expanded (core scenario events)
-- Events from noise_scenarios (unrelated workplace activity)
-- Respect noise_level: 0 = minimal noise, 1 = lots of unrelated messages
-- Respect depth: 0 = direct/obvious messages, 1 = indirect/multi-step conversations
-
-You must output ONLY valid JSON matching the schema. Do not include markdown code fences."""
-
+    # Load prompt config
+    repo_root = Path(__file__).resolve().parent.parent
+    config_path = repo_root / "prompt_config.json"
+    with open(config_path, 'r', encoding='utf-8') as f:
+        prompt_config = json.load(f)
+    
+    slack_prompts = prompt_config["generator"]["slack"]
+    system_prompt = slack_prompts["system_prompt"]
+    
     # Build user prompt
-    user_prompt = f"""Generate Slack workspace data from this world_state:
-
-Sub-scenarios (core events):
-{json.dumps(sub_scenarios_expanded, indent=2, ensure_ascii=False)}
-
-Noise scenarios (unrelated events):
-{json.dumps(noise_scenarios, indent=2, ensure_ascii=False)}
-
-People:
-{json.dumps(people, indent=2, ensure_ascii=False)}
-
-Parameters:
-- noise_level={noise_level}: {'Generate minimal noise' if noise_level < 0.3 else 'Generate moderate noise' if noise_level < 0.7 else 'Generate significant noise'}
-- depth={depth}: {'Make messages direct' if depth < 0.3 else 'Make messages moderately indirect' if depth < 0.7 else 'Make messages highly indirect, requiring multi-step chaining'}
-
-Target schema:
-{json.dumps(slack_schema, indent=2, ensure_ascii=False)}
-
-Output the complete Slack JSON now."""
+    sub_scenarios_expanded_json = json.dumps(sub_scenarios_expanded, indent=2, ensure_ascii=False)
+    noise_scenarios_json = json.dumps(noise_scenarios, indent=2, ensure_ascii=False)
+    people_json = json.dumps(people, indent=2, ensure_ascii=False)
+    slack_schema_json = json.dumps(slack_schema, indent=2, ensure_ascii=False)
+    noise_level_desc = 'Generate minimal noise' if noise_level < 0.3 else 'Generate moderate noise' if noise_level < 0.7 else 'Generate significant noise'
+    depth_desc = 'Make messages direct' if depth < 0.3 else 'Make messages moderately indirect' if depth < 0.7 else 'Make messages highly indirect, requiring multi-step chaining'
+    
+    user_prompt = slack_prompts["user_prompt_template"].format(
+        sub_scenarios_expanded_json=sub_scenarios_expanded_json,
+        noise_scenarios_json=noise_scenarios_json,
+        people_json=people_json,
+        noise_level=noise_level,
+        noise_level_desc=noise_level_desc,
+        depth=depth,
+        depth_desc=depth_desc,
+        slack_schema_json=slack_schema_json
+    )
 
     # Initialize OpenAI client
     client = OpenAI()

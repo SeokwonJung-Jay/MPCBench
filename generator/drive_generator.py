@@ -85,40 +85,33 @@ def generate_drive_data(world_state: Dict[str, Any], data_generation_model: str 
     noise_level = world_state.get("noise_level", 0.0)
     depth = world_state.get("depth", 0.0)
     
-    # Build system prompt
-    system_prompt = """You are a Google Drive data generator for a workplace benchmark. Your job is to generate realistic Drive file data based on scenario information.
-
-The output must be valid JSON matching the Drive schema with:
-- files: array of {id, name, mimeType (optional), content (optional text excerpt), modifiedTime (optional)}
-
-Generate Drive files that reflect:
-- Events from sub_scenarios_expanded (core scenario events, e.g., documents, reports)
-- Events from noise_scenarios (unrelated workplace files)
-- Respect noise_level: 0 = minimal noise, 1 = lots of unrelated files
-- Respect depth: 0 = direct/obvious files, 1 = indirect/multi-step file references
-
-You must output ONLY valid JSON matching the schema. Do not include markdown code fences."""
-
+    # Load prompt config
+    repo_root = Path(__file__).resolve().parent.parent
+    config_path = repo_root / "prompt_config.json"
+    with open(config_path, 'r', encoding='utf-8') as f:
+        prompt_config = json.load(f)
+    
+    drive_prompts = prompt_config["generator"]["drive"]
+    system_prompt = drive_prompts["system_prompt"]
+    
     # Build user prompt
-    user_prompt = f"""Generate Drive file data from this world_state:
-
-Sub-scenarios (core events):
-{json.dumps(sub_scenarios_expanded, indent=2, ensure_ascii=False)}
-
-Noise scenarios (unrelated events):
-{json.dumps(noise_scenarios, indent=2, ensure_ascii=False)}
-
-Projects (may reference project-related files):
-{json.dumps(projects, indent=2, ensure_ascii=False)}
-
-Parameters:
-- noise_level={noise_level}: {'Generate minimal noise' if noise_level < 0.3 else 'Generate moderate noise' if noise_level < 0.7 else 'Generate significant noise'}
-- depth={depth}: {'Make files direct' if depth < 0.3 else 'Make files moderately indirect' if depth < 0.7 else 'Make files highly indirect, requiring multi-step chaining'}
-
-Target schema:
-{json.dumps(drive_schema, indent=2, ensure_ascii=False)}
-
-Output the complete Drive JSON now."""
+    sub_scenarios_expanded_json = json.dumps(sub_scenarios_expanded, indent=2, ensure_ascii=False)
+    noise_scenarios_json = json.dumps(noise_scenarios, indent=2, ensure_ascii=False)
+    projects_json = json.dumps(projects, indent=2, ensure_ascii=False)
+    drive_schema_json = json.dumps(drive_schema, indent=2, ensure_ascii=False)
+    noise_level_desc = 'Generate minimal noise' if noise_level < 0.3 else 'Generate moderate noise' if noise_level < 0.7 else 'Generate significant noise'
+    depth_desc = 'Make files direct' if depth < 0.3 else 'Make files moderately indirect' if depth < 0.7 else 'Make files highly indirect, requiring multi-step chaining'
+    
+    user_prompt = drive_prompts["user_prompt_template"].format(
+        sub_scenarios_expanded_json=sub_scenarios_expanded_json,
+        noise_scenarios_json=noise_scenarios_json,
+        projects_json=projects_json,
+        noise_level=noise_level,
+        noise_level_desc=noise_level_desc,
+        depth=depth,
+        depth_desc=depth_desc,
+        drive_schema_json=drive_schema_json
+    )
 
     # Initialize OpenAI client
     client = OpenAI()

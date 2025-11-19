@@ -361,13 +361,14 @@ def run_task_with_openai(
     api_guidelines_text = read_text_if_exists(base_dir / "api_usage_guidelines.md")
     examples_text = read_text_if_exists(base_dir / "examples_of_tool_calls.md")
     
-    # Build system message
-    system_message = (
-        "You are a workplace assistant that can use tools (Slack, Google Contacts, Google Calendar, Jira, Gmail, Google Drive) "
-        "to answer user requests. You are evaluated on correct tool use and reasoning. "
-        "When you are ready to give your final answer, you MUST respond with a single JSON object of the form "
-        '{"final_answer": "...", "rationale": "..."} and nothing else.'
-    )
+    # Load prompt config
+    repo_root = Path(__file__).resolve().parent.parent
+    config_path = repo_root / "prompt_config.json"
+    with open(config_path, 'r', encoding='utf-8') as f:
+        prompt_config = json.load(f)
+    
+    # Build system message from prompt_config
+    system_message = prompt_config["evaluation"]["agent"]["system_message"]
     
     # Build developer message with context
     developer_content_parts = []
