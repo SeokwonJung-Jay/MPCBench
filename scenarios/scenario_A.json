@@ -82,7 +82,8 @@
       "participants_hint": ["Tom", "Alice", "Min"],
       "constraints_hint": {
         "approx_duration_minutes": 45,
-        "time_window": "next_week_working_hours"
+        "time_window": "next_week_working_hours",
+        "availability_requirement": "All participants (Tom, Alice, Min) must have at least one common free time slot of 45+ minutes within the specified time window (next week, working hours 09:00-18:00). Calendar data generation must ensure this availability exists."
       }
     },
     {
