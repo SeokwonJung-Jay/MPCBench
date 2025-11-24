@@ -152,6 +152,10 @@ python3 -m generator.run_generation --scenario-id scenario_A
 - `data/{scenario_id}_*.json` (all source data files)
 - `prompt_config.json` → `evaluation.agent.system_message`
 - `model_config.json` → `agent_models` (or `--agent-model` argument)
+- `llm_context/*.md` (agent LLM context files - **only used for agent, not for generator or judge**):
+  - `instructions_about_sources.md`: Description of each data source (Slack, Gmail, Calendar, etc.)
+  - `api_usage_guidelines.md`: Tool usage guidelines for each tool function
+  - `examples_of_tool_calls.md`: Example tool call sequences for each task type
 
 **Output**:
 - `evaluation/logs/{task_id}__agent-{model}_run.json`
@@ -162,7 +166,12 @@ python3 -m generator.run_generation --scenario-id scenario_A
    - Loads all source data files from `data/` directory
    - Creates query interfaces for each source (Slack, Calendar, Contacts, etc.)
 3. Calls `run_task_with_openai()`:
-   - Sends agent system prompt to LLM
+   - Loads context files from `llm_context/` directory:
+     - `instructions_about_sources.md`: Source descriptions
+     - `api_usage_guidelines.md`: Tool usage guidelines  
+     - `examples_of_tool_calls.md`: Example sequences
+   - Builds developer message with these context files
+   - Sends agent system prompt (from `prompt_config.json`) and developer message to LLM
    - Enters tool-calling loop:
      - Agent sends tool call requests
      - `ToolBackend` executes queries against loaded source data
