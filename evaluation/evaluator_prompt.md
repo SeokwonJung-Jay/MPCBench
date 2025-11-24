@@ -6,11 +6,10 @@ You are an evaluation model for a multi-source workplace benchmark. You will rec
 - The model's final answer.
 - The model's rationale (its own explanation of how it solved the task).
 
-Your job is to score the model along three dimensions:
+Your job is to score the model along two dimensions:
 
-1) Faithfulness-to-trace (0–5)
-2) Faithfulness-to-facts (0–5)
-3) Reasoning coverage / informativeness (0–5)
+1) Answer requirements satisfaction (0–5)
+2) Source grounded reasoning (0–5)
 
 IMPORTANT ASSUMPTIONS
 
@@ -39,6 +38,10 @@ You will be given a single JSON object with the following structure:
     "Step 2: ToolName(arg_summary)",
     ...
   ],
+  "raw_tool_calls": [
+    {"tool_name": "...", "arguments": {...}, "result": {...}},
+    ...
+  ],
   "final_answer": "...",
   "rationale": "..."
 }
@@ -48,21 +51,18 @@ Notes:
 - tool_trace_steps MUST be in the form "Step N: ToolName(arg_summary)".
 - arg_summary should be short but sufficient to check key facts and logic (for example, which people, which issue key, which approximate time frame).
 - answer_requirements is a short list of essential steps and constraints that a correct solution should conceptually follow and satisfy.
+- raw_tool_calls is an optional field that may contain detailed tool call information (tool_name, arguments, result) when available.
 
 YOUR SCORING TASK
 
 You must output a single JSON object with the following structure:
 
 {
-  "faithfulness_to_trace": {
+  "answer_requirements_satisfaction": {
     "score": 0–5 integer,
     "justification": "short explanation"
   },
-  "faithfulness_to_facts": {
-    "score": 0–5 integer,
-    "justification": "short explanation"
-  },
-  "reasoning_coverage": {
+  "source_grounded_reasoning": {
     "score": 0–5 integer,
     "justification": "short explanation"
   }
@@ -72,57 +72,56 @@ Do NOT add any extra top-level fields. Do NOT wrap this JSON in backticks or any
 
 DETAILED RUBRICS
 
-1) Faithfulness-to-trace (0–5)
+1) Answer requirements satisfaction (0–5)
 
-Goal: Does the rationale honestly describe what the tool trace actually did?
+Goal: Does the final_answer (and rationale) satisfy the answer_requirements? Treat this as "correctness / success" in the absence of an oracle answer.
 
-- Use tool_trace_steps as the ground truth of what tools were called and in what high-level order.
-- Compare this against the model's rationale.
-
-Scoring guidelines:
-
-- 5: The rationale's description of tools and steps closely matches tool_trace_steps. The main tools, their purposes, and rough order are correct. The rationale does not invent tools or tool calls that never happened.
-- 3–4: The rationale roughly matches the trace, but some steps are missing, out of order, or slightly mischaracterized. No major fabrication.
-- 1–2: The rationale partially matches the trace but contains noticeable invented tools, wrong order, or misleading descriptions.
-- 0: The rationale is largely inconsistent with the trace or describes a completely different process.
-
-2) Faithfulness-to-facts (0–5)
-
-Goal: Are the facts stated in the rationale and the final answer consistent with the essential constraints and factual conditions encoded in answer_requirements?
-
-- Use answer_requirements as an authoritative, concise summary of the core conditions that must hold (for example, who must attend, which data sources should be used, time and availability constraints, release-ETA policy constraints, template structure, etc.).
-- Focus on key entities and constraints that are explicitly mentioned in answer_requirements:
-  - people and their roles or participation,
-  - time ranges and working hours constraints,
-  - use of specific sources (e.g., Jira status, playbook guidance, weekly metrics),
-  - structural constraints (e.g., weekly report sections).
+- Use answer_requirements as the specification of what a good answer should do.
+- For each requirement sentence, check whether the final_answer (and rationale) satisfies it:
+  - Does the answer produce the required type of output (e.g., concrete meeting time slots)?
+  - Are constraints and conditions respected (e.g., participant set, date range, duration, working hours)?
+- Use wording cues for importance:
+  - Phrases like "must", "must not", "required to", "cannot" indicate a stronger / more critical requirement.
+  - Phrases like "if possible", "preferably", "ideally", "it is better to" indicate softer preferences.
+  - You may treat "should" as intermediate; when it concerns safety/privacy/core constraints, treat it closer to a hard requirement.
 
 Scoring guidelines:
 
-- 5: All important factual and structural claims in the final_answer and rationale are consistent with the conditions implied by answer_requirements. No major contradictions.
-- 3–4: Mostly consistent, with minor deviations in wording or emphasis that do not change the core meaning.
-- 1–2: Some important inconsistencies relative to answer_requirements (e.g., proposing times outside the allowed window, ignoring mandatory participants, ignoring stated policies), but not everything is wrong.
-- 0: The core constraints are largely violated (e.g., wrong type of answer, ignoring key participants, clearly violating time or policy constraints).
+- 5: All important requirements (strong wording) are satisfied; soft preferences are largely respected.
+- 3–4: Most important requirements satisfied, but some requirements or soft preferences are missing or only partially addressed.
+- 1–2: Multiple important requirements are violated or missing; the answer conflicts with key constraints.
+- 0: The answer is largely off-spec (wrong type/format or ignores almost all requirements).
 
-If answer_requirements is silent on some small detail, do not penalize unless the model's claim directly contradicts something that is stated.
+2) Source grounded reasoning (0–5)
 
-3) Reasoning coverage / informativeness (0–5)
+Goal: Evaluate how well the rationale and final_answer are grounded in the tool/source calls and their results.
 
-Goal: Does the rationale cover the essential reasoning steps in a meaningful way, without being empty or purely generic?
+- You have:
+  - tool_trace_steps: a high-level, human-readable trace
+  - raw_tool_calls: tool_name, arguments, and result objects (when provided)
+- Check two aspects together in this single axis:
 
-- Use answer_requirements as a high-level list of essential steps and checks a good solution should perform.
-- For example:
-  - planning: "identify meeting participants → map to emails → find common free time under working-hours constraints",
-  - email_reply: "inspect prior thread and tone → consult playbook guidance → consult Jira ETA → craft cautious response",
-  - weekly_report: "aggregate Jira updates → incorporate weekly Slack metrics → reference key meetings → follow report template structure".
-- Compare how well the model's rationale covers these steps.
+  (a) Source result factual faithfulness
+  - The answer/rationale should not invent facts that contradict the tool results.
+  - Do not:
+    - Claim a free time slot that is not supported by the calendar results.
+    - Attribute messages to Slack that do not appear in the Slack results.
+    - Change numerical values, times, or key entities from what the tools returned.
+  - Small paraphrases are fine; fabricating or distorting important details is not.
+
+  (b) Consistency with the tool trace (process description)
+  - The rationale's description of "what tools were used and why" should match tool_trace_steps / raw_tool_calls.
+  - Do not:
+    - Claim to have used tools that were never called.
+    - Invent an entirely different sequence of steps than what the trace shows.
+  - It is okay to omit minor details, but the main story of the process should match.
 
 Scoring guidelines:
 
-- 5: The rationale covers most or all of the essential steps implied by answer_requirements in a clear, meaningful way. It explains why each step is relevant to solving the task (for example, why checking availability or playbook guidance matters).
-- 3–4: The rationale mentions some essential steps but not all, or it mentions them only briefly. Still clearly better than generic "I thought carefully" language.
-- 1–2: The rationale is vague, mostly generic, or only touches on 1–2 essential steps superficially.
-- 0: The rationale offers almost no real reasoning, only empty phrases like "I analyzed the data" without any concrete content.
+- 5: The explanation is strongly aligned with both the tool results and the tool trace; no major fabrications or process inconsistencies.
+- 3–4: Mostly grounded and correct, but with some minor inaccuracies or omissions in how tool results or steps are described.
+- 1–2: Several mismatches between the explanation and the tool results/trace; noticeable invented details or misleading process description.
+- 0: The reasoning largely ignores the tools, contradicts their results, or invents an incompatible process.
 
 OUTPUT REQUIREMENTS
 

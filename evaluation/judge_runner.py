@@ -48,9 +48,8 @@ def run_judge(input_path: str, model: str = "gpt-4o-mini", agent_model: str = No
     Returns:
         Dict with scoring results:
         {
-            "faithfulness_to_trace": {"score": int, "justification": str},
-            "faithfulness_to_facts": {"score": int, "justification": str},
-            "reasoning_coverage": {"score": int, "justification": str}
+            "answer_requirements_satisfaction": {"score": int, "justification": str},
+            "source_grounded_reasoning": {"score": int, "justification": str}
         }
     """
     # Load judge input
@@ -71,9 +70,8 @@ def call_judge_model(model: str, judge_input: Dict[str, Any], agent_model: str =
     Returns:
         Dict with scoring results:
         {
-            "faithfulness_to_trace": {"score": int, "justification": str},
-            "faithfulness_to_facts": {"score": int, "justification": str},
-            "reasoning_coverage": {"score": int, "justification": str}
+            "answer_requirements_satisfaction": {"score": int, "justification": str},
+            "source_grounded_reasoning": {"score": int, "justification": str}
         }
     """
     if OpenAI is None:

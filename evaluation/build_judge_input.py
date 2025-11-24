@@ -91,6 +91,8 @@ def build_judge_input_from_log(log_path: str) -> Dict[str, Any]:
             "user_prompt": str,
             "answer_requirements": list[str],
             "tool_trace_steps": list[str],
+            "raw_tool_calls": list[dict],
+            "tool_trace": list[dict],
             "final_answer": str,
             "rationale": str
         }
@@ -107,6 +109,7 @@ def build_judge_input_from_log(log_path: str) -> Dict[str, Any]:
     task_id = log_data.get("task_id")
     user_prompt = log_data.get("user_prompt")
     tool_trace_steps = log_data.get("tool_trace_steps", [])
+    raw_tool_calls = log_data.get("raw_tool_calls", [])
     final_answer = log_data.get("final_answer", "")
     rationale = log_data.get("rationale", "")
     
@@ -126,6 +129,16 @@ def build_judge_input_from_log(log_path: str) -> Dict[str, Any]:
     # Infer task_type
     task_type = infer_task_type(task)
     
+    # Build tool_trace from raw_tool_calls
+    tool_trace = []
+    for idx, call in enumerate(raw_tool_calls):
+        tool_trace.append({
+            "step": idx + 1,  # 1-based index
+            "tool_name": call.get("tool_name", ""),
+            "arguments": call.get("arguments", {}),
+            "result": call.get("result", {})
+        })
+    
     # Build judge input
     judge_input = {
         "task_id": task_id,
@@ -133,6 +146,8 @@ def build_judge_input_from_log(log_path: str) -> Dict[str, Any]:
         "user_prompt": user_prompt,
         "answer_requirements": answer_requirements,
         "tool_trace_steps": tool_trace_steps,
+        "raw_tool_calls": raw_tool_calls,  # Copy verbatim from run JSON
+        "tool_trace": tool_trace,
         "final_answer": final_answer,
         "rationale": rationale
     }
