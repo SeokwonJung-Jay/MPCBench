@@ -45,6 +45,9 @@ __MACOSX/
 *.sublime-project
 *.sublime-workspace
 
+# Archive (v1 code - cold storage)
+archive/
+
 # Project-specific generated data and logs
 # These are generated artifacts from world_state_generator and run_generation
 data/
