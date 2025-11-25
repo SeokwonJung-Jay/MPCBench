@@ -1,0 +1,362 @@
+[
+  {
+    "task_file": "tasks/planning/scenario_group1_v10_planning_task_context_3.json",
+    "task_id": "scenario_group1_v10_planning__context_3",
+    "scenario_id": "scenario_group1_v10",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v10_planning_task_context_3.json",
+    "task_id": "scenario_group1_v10_planning__context_3",
+    "scenario_id": "scenario_group1_v10",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v10_planning_task_context_3.json",
+    "task_id": "scenario_group1_v10_planning__context_3",
+    "scenario_id": "scenario_group1_v10",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v1_planning_task_v1.json",
+    "task_id": "scenario_group1_v1_planning__v1",
+    "scenario_id": "scenario_group1_v1",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v1_planning_task_v1.json",
+    "task_id": "scenario_group1_v1_planning__v1",
+    "scenario_id": "scenario_group1_v1",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v1_planning_task_v1.json",
+    "task_id": "scenario_group1_v1_planning__v1",
+    "scenario_id": "scenario_group1_v1",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v2_planning_task_v2.json",
+    "task_id": "scenario_group1_v2_planning__v2",
+    "scenario_id": "scenario_group1_v2",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v2_planning_task_v2.json",
+    "task_id": "scenario_group1_v2_planning__v2",
+    "scenario_id": "scenario_group1_v2",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v2_planning_task_v2.json",
+    "task_id": "scenario_group1_v2_planning__v2",
+    "scenario_id": "scenario_group1_v2",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v3_planning_task_v3.json",
+    "task_id": "scenario_group1_v3_planning__v3",
+    "scenario_id": "scenario_group1_v3",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v3_planning_task_v3.json",
+    "task_id": "scenario_group1_v3_planning__v3",
+    "scenario_id": "scenario_group1_v3",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v3_planning_task_v3.json",
+    "task_id": "scenario_group1_v3_planning__v3",
+    "scenario_id": "scenario_group1_v3",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v4_planning_task_v4.json",
+    "task_id": "scenario_group1_v4_planning__v4",
+    "scenario_id": "scenario_group1_v4",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v4_planning_task_v4.json",
+    "task_id": "scenario_group1_v4_planning__v4",
+    "scenario_id": "scenario_group1_v4",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v4_planning_task_v4.json",
+    "task_id": "scenario_group1_v4_planning__v4",
+    "scenario_id": "scenario_group1_v4",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v5_planning_task_complex_1.json",
+    "task_id": "scenario_group1_v5_planning__complex_1",
+    "scenario_id": "scenario_group1_v5",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v5_planning_task_complex_1.json",
+    "task_id": "scenario_group1_v5_planning__complex_1",
+    "scenario_id": "scenario_group1_v5",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v5_planning_task_complex_1.json",
+    "task_id": "scenario_group1_v5_planning__complex_1",
+    "scenario_id": "scenario_group1_v5",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v6_planning_task_complex_2.json",
+    "task_id": "scenario_group1_v6_planning__complex_2",
+    "scenario_id": "scenario_group1_v6",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v6_planning_task_complex_2.json",
+    "task_id": "scenario_group1_v6_planning__complex_2",
+    "scenario_id": "scenario_group1_v6",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v6_planning_task_complex_2.json",
+    "task_id": "scenario_group1_v6_planning__complex_2",
+    "scenario_id": "scenario_group1_v6",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v7_planning_task_complex_3.json",
+    "task_id": "scenario_group1_v7_planning__complex_3",
+    "scenario_id": "scenario_group1_v7",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v7_planning_task_complex_3.json",
+    "task_id": "scenario_group1_v7_planning__complex_3",
+    "scenario_id": "scenario_group1_v7",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v7_planning_task_complex_3.json",
+    "task_id": "scenario_group1_v7_planning__complex_3",
+    "scenario_id": "scenario_group1_v7",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v8_planning_task_context_1.json",
+    "task_id": "scenario_group1_v8_planning__context_1",
+    "scenario_id": "scenario_group1_v8",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v8_planning_task_context_1.json",
+    "task_id": "scenario_group1_v8_planning__context_1",
+    "scenario_id": "scenario_group1_v8",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v8_planning_task_context_1.json",
+    "task_id": "scenario_group1_v8_planning__context_1",
+    "scenario_id": "scenario_group1_v8",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v9_planning_task_context_2.json",
+    "task_id": "scenario_group1_v9_planning__context_2",
+    "scenario_id": "scenario_group1_v9",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v9_planning_task_context_2.json",
+    "task_id": "scenario_group1_v9_planning__context_2",
+    "scenario_id": "scenario_group1_v9",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group1_v9_planning_task_context_2.json",
+    "task_id": "scenario_group1_v9_planning__context_2",
+    "scenario_id": "scenario_group1_v9",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v10_planning_task_context_3.json",
+    "task_id": "scenario_group2_v10_planning__context_3",
+    "scenario_id": "scenario_group2_v10",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v10_planning_task_context_3.json",
+    "task_id": "scenario_group2_v10_planning__context_3",
+    "scenario_id": "scenario_group2_v10",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v10_planning_task_context_3.json",
+    "task_id": "scenario_group2_v10_planning__context_3",
+    "scenario_id": "scenario_group2_v10",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v1_planning_task_v1.json",
+    "task_id": "scenario_group2_v1_planning__v1",
+    "scenario_id": "scenario_group2_v1",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v1_planning_task_v1.json",
+    "task_id": "scenario_group2_v1_planning__v1",
+    "scenario_id": "scenario_group2_v1",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v1_planning_task_v1.json",
+    "task_id": "scenario_group2_v1_planning__v1",
+    "scenario_id": "scenario_group2_v1",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v2_planning_task_v2.json",
+    "task_id": "scenario_group2_v2_planning__v2",
+    "scenario_id": "scenario_group2_v2",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v2_planning_task_v2.json",
+    "task_id": "scenario_group2_v2_planning__v2",
+    "scenario_id": "scenario_group2_v2",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v2_planning_task_v2.json",
+    "task_id": "scenario_group2_v2_planning__v2",
+    "scenario_id": "scenario_group2_v2",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v3_planning_task_v3.json",
+    "task_id": "scenario_group2_v3_planning__v3",
+    "scenario_id": "scenario_group2_v3",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v3_planning_task_v3.json",
+    "task_id": "scenario_group2_v3_planning__v3",
+    "scenario_id": "scenario_group2_v3",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v3_planning_task_v3.json",
+    "task_id": "scenario_group2_v3_planning__v3",
+    "scenario_id": "scenario_group2_v3",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v4_planning_task_v4.json",
+    "task_id": "scenario_group2_v4_planning__v4",
+    "scenario_id": "scenario_group2_v4",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v4_planning_task_v4.json",
+    "task_id": "scenario_group2_v4_planning__v4",
+    "scenario_id": "scenario_group2_v4",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v4_planning_task_v4.json",
+    "task_id": "scenario_group2_v4_planning__v4",
+    "scenario_id": "scenario_group2_v4",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v5_planning_task_complex_1.json",
+    "task_id": "scenario_group2_v5_planning__complex_1",
+    "scenario_id": "scenario_group2_v5",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v5_planning_task_complex_1.json",
+    "task_id": "scenario_group2_v5_planning__complex_1",
+    "scenario_id": "scenario_group2_v5",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v5_planning_task_complex_1.json",
+    "task_id": "scenario_group2_v5_planning__complex_1",
+    "scenario_id": "scenario_group2_v5",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v6_planning_task_complex_2.json",
+    "task_id": "scenario_group2_v6_planning__complex_2",
+    "scenario_id": "scenario_group2_v6",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v6_planning_task_complex_2.json",
+    "task_id": "scenario_group2_v6_planning__complex_2",
+    "scenario_id": "scenario_group2_v6",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v6_planning_task_complex_2.json",
+    "task_id": "scenario_group2_v6_planning__complex_2",
+    "scenario_id": "scenario_group2_v6",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v7_planning_task_complex_3.json",
+    "task_id": "scenario_group2_v7_planning__complex_3",
+    "scenario_id": "scenario_group2_v7",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v7_planning_task_complex_3.json",
+    "task_id": "scenario_group2_v7_planning__complex_3",
+    "scenario_id": "scenario_group2_v7",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v7_planning_task_complex_3.json",
+    "task_id": "scenario_group2_v7_planning__complex_3",
+    "scenario_id": "scenario_group2_v7",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v8_planning_task_context_1.json",
+    "task_id": "scenario_group2_v8_planning__context_1",
+    "scenario_id": "scenario_group2_v8",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v8_planning_task_context_1.json",
+    "task_id": "scenario_group2_v8_planning__context_1",
+    "scenario_id": "scenario_group2_v8",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v8_planning_task_context_1.json",
+    "task_id": "scenario_group2_v8_planning__context_1",
+    "scenario_id": "scenario_group2_v8",
+    "agent": "gpt-5.1"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v9_planning_task_context_2.json",
+    "task_id": "scenario_group2_v9_planning__context_2",
+    "scenario_id": "scenario_group2_v9",
+    "agent": "gpt-4o-mini"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v9_planning_task_context_2.json",
+    "task_id": "scenario_group2_v9_planning__context_2",
+    "scenario_id": "scenario_group2_v9",
+    "agent": "gpt-4o"
+  },
+  {
+    "task_file": "tasks/planning/scenario_group2_v9_planning_task_context_2.json",
+    "task_id": "scenario_group2_v9_planning__context_2",
+    "scenario_id": "scenario_group2_v9",
+    "agent": "gpt-5.1"
+  }
+]

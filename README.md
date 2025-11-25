@@ -408,6 +408,50 @@ Contains system prompts for
 
 ---
 
+## Experiments
+
+### Noise & Depth Experiment
+
+MPCBench includes an experiment framework to evaluate agent performance across different scenario complexities using `noise_level` and `depth` parameters.
+
+**Parameters**
+- `noise_level` (0.0, 0.5, 1.0): Controls the amount of unrelated workplace events
+  - 0.0: Minimal noise, only core scenario events
+  - 0.5: Moderate noise, some unrelated events
+  - 1.0: High noise, many unrelated events
+- `depth` (0.0, 0.5, 1.0): Controls the complexity and interconnectedness of events
+  - 0.0: Simple, isolated events
+  - 0.5: Moderate complexity, some connections
+  - 1.0: High complexity, deeply interconnected events
+
+**Experiment Setup**
+- 5 scenarios with varying `noise_level` and `depth` combinations
+- Each scenario has one `planning_meeting` sub-scenario
+- Each scenario generates one corresponding planning task
+- All tasks require finding 45-minute meeting slots for specified participants
+
+**Execution**
+```bash
+# Generate noise & depth scenarios and tasks
+python3 generation_tools/generate_noise_depth_scenarios.py
+python3 generation_tools/generate_noise_depth_tasks.py
+
+# Run full pipeline (data generation + evaluation)
+python3 -m generator.world_state_generator --scenario-id scenario_noise0_depth0
+python3 -m generator.run_generation --scenario-id scenario_noise0_depth0
+python3 -m evaluation.run_task_and_judge \
+  --task tasks/planning/scenario_noise0_depth0_planning_task.json \
+  --scenario-id scenario_noise0_depth0
+```
+
+**Key Changes for Experiments**
+- Removed `max_tool_rounds` limit in `openai_agent_runner.py` to allow agents to complete reasoning
+- Increased generator `temperature` to 0.9 for more diverse data generation
+- Standardized date formats to YYYY-MM-DD across all tools
+- Fixed calendar availability logic to correctly handle date ranges
+
+---
+
 ## Key Design Principles
 
 1. **Separation of Concerns**

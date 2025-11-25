@@ -22,12 +22,13 @@ This document provides end-to-end examples of how to combine multiple tools to a
 3. **GoogleCalendar.FindTimeSlotsWhenEveryoneIsFree**
    - Arguments:
      - `email_addresses`: `["tom@partner.co", "alice.kim@company.com", "min.lee@company.com"]`
-     - `start_date`: `"2025-11-13"`
-     - `end_date`: `"2025-11-20"`
+     - `start_date`: `"2025-11-17"` (YYYY-MM-DD format)
+     - `end_date`: `"2025-11-21"` (YYYY-MM-DD format)
      - `workday_start_time`: `"09:00"`
      - `workday_end_time`: `"18:00"`
      - `slot_minimum_minutes`: `45`
    - Returns: List of time slots where all three participants are free.
+   - Note: If `start_date` or `end_date` is not provided, the tool automatically uses the full range of calendar events.
 
 **Example assistant response:**
 "I found a few options for the meeting with Tom, Alice, and Min next week:

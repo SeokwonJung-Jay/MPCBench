@@ -173,6 +173,8 @@ class ToolBackend:
         if not search_name:
             return {"contacts": []}
         
+        limit = arguments.get("limit")
+        
         # Simple case-insensitive substring match
         matching_contacts = []
         for contact in contacts:
@@ -183,6 +185,10 @@ class ToolBackend:
                     "name": contact.get("name", ""),
                     "emails": [contact.get("email", "")]
                 })
+        
+        # Apply limit if specified
+        if limit is not None and limit > 0:
+            matching_contacts = matching_contacts[:limit]
         
         return {"contacts": matching_contacts}
     
@@ -197,8 +203,9 @@ class ToolBackend:
         world_state = self._load_world_state()
         
         email_addresses = arguments.get("email_addresses", [])
-        date_range_start = arguments.get("date_range_start", "")
-        date_range_end = arguments.get("date_range_end", "")
+        # Accept both start_date/end_date (from API) and date_range_start/date_range_end (legacy)
+        date_range_start = arguments.get("start_date") or arguments.get("date_range_start", "")
+        date_range_end = arguments.get("end_date") or arguments.get("date_range_end", "")
         workday_start_time = arguments.get("workday_start_time", "09:00")
         workday_end_time = arguments.get("workday_end_time", "18:00")
         slot_minimum_minutes = arguments.get("slot_minimum_minutes", 30)
@@ -262,35 +269,90 @@ class ToolBackend:
                 except (ValueError, AttributeError):
                     pass
         
-        # Parse date range
+        # Parse date range (expects YYYY-MM-DD format)
         try:
             if date_range_start:
-                # If date_range_start is just a date (YYYY-MM-DD), add time
-                if len(date_range_start) == 10:
-                    date_range_start = f"{date_range_start}T00:00:00"
-                range_start_dt = datetime.fromisoformat(date_range_start.replace('Z', '+00:00'))
-                if tzinfo and not range_start_dt.tzinfo:
+                # Expect YYYY-MM-DD format
+                if len(date_range_start) != 10 or date_range_start.count('-') != 2:
+                    return {"time_slots": []}
+                range_start_dt = datetime.combine(
+                    datetime.strptime(date_range_start, "%Y-%m-%d").date(),
+                    datetime.min.time()
+                )
+                if tzinfo:
                     range_start_dt = range_start_dt.replace(tzinfo=tzinfo)
             else:
                 range_start_dt = None
             if date_range_end:
-                # If date_range_end is just a date (YYYY-MM-DD), add time
-                if len(date_range_end) == 10:
-                    date_range_end = f"{date_range_end}T23:59:59"
-                range_end_dt = datetime.fromisoformat(date_range_end.replace('Z', '+00:00'))
-                if tzinfo and not range_end_dt.tzinfo:
+                # Expect YYYY-MM-DD format
+                if len(date_range_end) != 10 or date_range_end.count('-') != 2:
+                    return {"time_slots": []}
+                range_end_dt = datetime.combine(
+                    datetime.strptime(date_range_end, "%Y-%m-%d").date(),
+                    datetime.min.time()
+                )
+                if tzinfo:
                     range_end_dt = range_end_dt.replace(tzinfo=tzinfo)
             else:
                 range_end_dt = None
         except (ValueError, AttributeError):
             return {"time_slots": []}
         
+        # If date range not provided, infer from calendar events
+        if not range_start_dt or not range_end_dt:
+            event_dates = []
+            for event in events:
+                event_start_str = event.get("start", "")
+                if event_start_str:
+                    try:
+                        event_dt = datetime.fromisoformat(event_start_str.replace('Z', '+00:00'))
+                        event_dates.append(event_dt.date())
+                    except (ValueError, AttributeError):
+                        continue
+            
+            if event_dates:
+                min_event_date = min(event_dates)
+                max_event_date = max(event_dates)
+                # Use the full range of calendar events
+                if not range_start_dt:
+                    range_start_dt = datetime.combine(min_event_date, datetime.min.time())
+                    if tzinfo:
+                        range_start_dt = range_start_dt.replace(tzinfo=tzinfo)
+                if not range_end_dt:
+                    range_end_dt = datetime.combine(max_event_date, datetime.min.time())
+                    if tzinfo:
+                        range_end_dt = range_end_dt.replace(tzinfo=tzinfo)
+            else:
+                # Fallback: use current date + 7 days if no events found
+                if not range_start_dt:
+                    range_start_dt = datetime.now()
+                    if tzinfo:
+                        range_start_dt = range_start_dt.replace(tzinfo=tzinfo)
+                if not range_end_dt:
+                    range_end_dt = range_start_dt + timedelta(days=7)
+        
+        # Validate: if date range is provided, check if calendar data covers it
+        if range_start_dt and range_end_dt:
+            event_dates = []
+            for event in events:
+                event_start_str = event.get("start", "")
+                if event_start_str:
+                    try:
+                        event_dt = datetime.fromisoformat(event_start_str.replace('Z', '+00:00'))
+                        event_dates.append(event_dt.date())
+                    except (ValueError, AttributeError):
+                        continue
+            
+            # Note: We don't validate date range overlap here because:
+            # - If search range doesn't overlap with events, that means the entire range is free
+            # - We should return available slots for the requested range regardless of event dates
+        
         # Find common free slots
         time_slots = []
         
         # Iterate day by day
-        current_date = range_start_dt.date() if range_start_dt else datetime.now().date()
-        end_date = range_end_dt.date() if range_end_dt else current_date + timedelta(days=7)
+        current_date = range_start_dt.date()
+        end_date = range_end_dt.date()
         
         while current_date <= end_date:
             # Build workday time range for this date
@@ -436,16 +498,40 @@ class ToolBackend:
                 if sender_filter not in first_message_from:
                     continue
             
-            # Check date range (simplified: check first message date)
+            # Check date range (parse "last_N_days" format)
             if date_range:
                 messages = thread.get("messages", [])
                 if not messages:
                     continue
-                first_message_date = messages[0].get("date", "")
-                # Simple date range matching (e.g., "last_30_days")
-                # For now, just check if date_range is specified, actual date parsing can be enhanced
-                # This is a simplified implementation
-                pass
+                first_message_date_str = messages[0].get("date", "")
+                if not first_message_date_str:
+                    continue
+                
+                try:
+                    # Parse first message date
+                    first_message_dt = datetime.fromisoformat(first_message_date_str.replace('Z', '+00:00'))
+                    first_message_date = first_message_dt.date()
+                    
+                    # Parse date_range (e.g., "last_30_days", "last_7_days")
+                    today = datetime.now(first_message_dt.tzinfo).date() if first_message_dt.tzinfo else datetime.now().date()
+                    
+                    if date_range.startswith("last_"):
+                        # Extract number of days
+                        days_str = date_range.replace("last_", "").replace("_days", "").replace("_day", "")
+                        try:
+                            days = int(days_str)
+                            cutoff_date = today - timedelta(days=days)
+                            if first_message_date < cutoff_date:
+                                continue
+                        except ValueError:
+                            # If parsing fails, skip date filtering
+                            pass
+                    else:
+                        # Unknown format, skip date filtering
+                        pass
+                except (ValueError, AttributeError):
+                    # If date parsing fails, skip date filtering
+                    pass
             
             matching_thread_ids.append(thread.get("id", ""))
         

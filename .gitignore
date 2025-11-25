@@ -50,6 +50,9 @@ __MACOSX/
 data/
 evaluation/logs/
 
+# Generation tools (one-time use scripts)
+generation_tools/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 

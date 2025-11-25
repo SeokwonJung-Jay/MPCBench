@@ -32,7 +32,7 @@ Use when you need to recall something someone said or find messages about a spec
 
 **Arguments:**
 - `name` (string): The person's name to search for
-- `limit` (integer, optional): Maximum number of results to return
+- `limit` (integer, optional): Maximum number of contacts to return. If not specified, returns all matching contacts.
 
 **Returns:**
 A list of contacts with names and email addresses matching the search.
@@ -43,9 +43,10 @@ Use when you know a person's name but need their email address (e.g., for calend
 **Common mistakes to avoid:**
 - Calling it when you already have an email address
 - Using partial names that might match multiple people (be as specific as possible)
+- Not using limit when you only need one contact (e.g., limit=1 for exact matches)
 
 **Example:**
-Search for "Alice Kim" to get "alice.kim@company.com"
+Search for "Alice Kim" with limit=1 to get "alice.kim@company.com"
 
 ---
 
@@ -53,11 +54,11 @@ Search for "Alice Kim" to get "alice.kim@company.com"
 
 **Arguments:**
 - `email_addresses` (array of strings): List of participant email addresses
-- `start_date` (string, YYYY-MM-DD): Start of the date range to search
-- `end_date` (string, YYYY-MM-DD): End of the date range to search
-- `workday_start_time` (string, HH:MM): Start of workday hours (e.g., "09:00")
-- `workday_end_time` (string, HH:MM): End of workday hours (e.g., "18:00")
-- `slot_minimum_minutes` (integer): Minimum duration for a meeting slot
+- `start_date` (string, optional, YYYY-MM-DD): Start of the date range to search (e.g., "2025-11-17"). If not provided, uses the full range of calendar events.
+- `end_date` (string, optional, YYYY-MM-DD): End of the date range to search (e.g., "2025-11-21"). If not provided, uses the full range of calendar events.
+- `workday_start_time` (string, optional, HH:MM): Start of workday hours (e.g., "09:00"). Defaults to "09:00".
+- `workday_end_time` (string, optional, HH:MM): End of workday hours (e.g., "18:00"). Defaults to "18:00".
+- `slot_minimum_minutes` (integer, optional): Minimum duration for a meeting slot. Defaults to 30.
 
 **Returns:**
 A list of time slots with start and end datetimes where all participants are free.
@@ -71,7 +72,7 @@ Use when you need to find overlapping availability for multiple people within a 
 - Forgetting to specify reasonable workday hours
 
 **Example:**
-Find 45-minute slots for three people between 2025-11-13 and 2025-11-20, during 09:00-18:00.
+Find 45-minute slots for three people between 2025-11-17 and 2025-11-21, during 09:00-18:00.
 
 ---
 
@@ -103,11 +104,11 @@ List events between 2025-11-09T00:00:00+09:00 and 2025-11-16T23:59:59+09:00.
 **Arguments:**
 - `subject` (string, optional): Subject line keywords to search for
 - `sender` (string, optional): Sender email address
-- `date_range` (string, optional): Time range like "last_30_days" or "last_7_days"
+- `date_range` (string, optional): Time range like "last_30_days" or "last_7_days". Filters threads by the first message date.
 - `max_results` (integer, optional): Maximum number of threads to return
 
 **Returns:**
-A list of thread IDs or a summary list of matching threads.
+A list of thread IDs matching the search criteria.
 
 **When to use:**
 Use to find relevant email conversations by subject and sender within a time range.

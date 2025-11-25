@@ -134,7 +134,7 @@ def generate_world_state(scenario_id: str = "scenario_A") -> Dict[str, Any]:
     response = client.chat.completions.create(
         model=data_generation_model,
         messages=messages,
-        temperature=0.7,
+        temperature=0.9,
     )
     
     # Log this LLM call

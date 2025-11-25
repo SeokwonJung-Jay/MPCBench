@@ -137,8 +137,14 @@ def build_all_tools_spec() -> List[Dict[str, Any]]:
                             "items": {"type": "string"},
                             "description": "Email addresses of participants.",
                         },
-                        "start_date": {"type": "string"},
-                        "end_date": {"type": "string"},
+                        "start_date": {
+                            "type": "string",
+                            "description": "Start date in YYYY-MM-DD format (e.g., '2025-11-17')"
+                        },
+                        "end_date": {
+                            "type": "string",
+                            "description": "End date in YYYY-MM-DD format (e.g., '2025-11-21')"
+                        },
                         "workday_start_time": {"type": "string"},
                         "workday_end_time": {"type": "string"},
                         "slot_minimum_minutes": {"type": "integer"},
@@ -312,7 +318,6 @@ def run_task_with_openai(
     data_root: str,
     scenario_id: str,
     model: str = "gpt-4o-mini",
-    max_tool_rounds: int = 4,
 ) -> Dict[str, Any]:
     """
     Run a task using OpenAI with tool calling.
@@ -324,7 +329,6 @@ def run_task_with_openai(
         data_root: Path to data directory (default: "data")
         scenario_id: Scenario identifier (required, no default)
         model: OpenAI model name (default: "gpt-4o-mini")
-        max_tool_rounds: Maximum number of tool-calling rounds (default: 4)
         
     Returns:
         Dictionary with task_id, user_prompt, tool_trace_steps, raw_tool_calls,
@@ -399,9 +403,9 @@ def run_task_with_openai(
     final_answer = ""
     rationale = ""
     
-    # Agent loop
+    # Agent loop (no limit on tool rounds)
     step_count = 0
-    for round_idx in range(max_tool_rounds):
+    while True:
         step_count += 1
         print(f"[openai_agent_runner] Step {step_count}: calling model...")
         

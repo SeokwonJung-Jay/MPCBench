@@ -125,7 +125,7 @@ def generate_contacts_data(world_state: Dict[str, Any], data_generation_model: s
     response = client.chat.completions.create(
         model=data_generation_model,
         messages=messages,
-        temperature=0.7,
+        temperature=0.9,
     )
     
     # Log this LLM call
