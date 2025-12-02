@@ -1,0 +1,123 @@
+{
+  "task_id": "example_planning_001",
+  "final_answer": "Alice, Bob, and Carol are all available for a meeting next week on the following dates and times:\n\n- **December 2, 2025**:\n  - 13:00 - 13:45\n  - 14:00 - 14:45\n  - 15:00 - 15:45\n  - 16:00 - 16:45\n  - 17:00 - 17:45\n\n- **December 3, 2025**:\n  - 13:00 - 13:45\n\nPlease let me know if you would like to schedule the meeting at any of these times!",
+  "rationale": "Alice, Bob, and Carol are all available for a meeting next week on the following dates and times:\n\n- **December 2, 2025**:\n  - 13:00 - 13:45\n  - 14:00 - 14:45\n  - 15:00 - 15:45\n  - 16:00 - 16:45\n  - 17:00 - 17:45\n\n- **December 3, 2025**:\n  - 13:00 - 13:45\n\nPlease let me know if you would like to schedule the meeting at any of these times!",
+  "tool_calls": [
+    {
+      "step": 1,
+      "tool_name": "contacts_search_by_name",
+      "arguments": {
+        "name": "Alice"
+      },
+      "result": {
+        "contacts": [
+          {
+            "name": "Alice",
+            "email": "alice@example.com"
+          }
+        ]
+      }
+    },
+    {
+      "step": 2,
+      "tool_name": "contacts_search_by_name",
+      "arguments": {
+        "name": "Bob"
+      },
+      "result": {
+        "contacts": [
+          {
+            "name": "Bob",
+            "email": "bob@example.com"
+          }
+        ]
+      }
+    },
+    {
+      "step": 3,
+      "tool_name": "contacts_search_by_name",
+      "arguments": {
+        "name": "Carol"
+      },
+      "result": {
+        "contacts": [
+          {
+            "name": "Carol",
+            "email": "carol@example.com"
+          }
+        ]
+      }
+    },
+    {
+      "step": 4,
+      "tool_name": "calendar_find_time_slots",
+      "arguments": {
+        "email_addresses": [
+          "alice@example.com",
+          "bob@example.com",
+          "carol@example.com"
+        ],
+        "start_date": "2025-12-01",
+        "end_date": "2025-12-07"
+      },
+      "result": {
+        "time_slots": [
+          {
+            "date": "2025-12-02",
+            "slot": "14:00-14:45",
+            "participants": [
+              "alice@example.com",
+              "bob@example.com",
+              "carol@example.com"
+            ]
+          },
+          {
+            "date": "2025-12-02",
+            "slot": "13:00-13:45",
+            "participants": [
+              "alice@example.com",
+              "bob@example.com",
+              "carol@example.com"
+            ]
+          },
+          {
+            "date": "2025-12-02",
+            "slot": "15:00-15:45",
+            "participants": [
+              "alice@example.com",
+              "bob@example.com",
+              "carol@example.com"
+            ]
+          },
+          {
+            "date": "2025-12-02",
+            "slot": "16:00-16:45",
+            "participants": [
+              "alice@example.com",
+              "bob@example.com",
+              "carol@example.com"
+            ]
+          },
+          {
+            "date": "2025-12-02",
+            "slot": "17:00-17:45",
+            "participants": [
+              "alice@example.com",
+              "bob@example.com",
+              "carol@example.com"
+            ]
+          },
+          {
+            "date": "2025-12-03",
+            "slot": "13:00-13:45",
+            "participants": [
+              "alice@example.com",
+              "bob@example.com",
+              "carol@example.com"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

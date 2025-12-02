@@ -1,0 +1,141 @@
+{
+  "task_id": "example_planning_001",
+  "agent_model": "gpt-4o",
+  "task_category": "planning",
+  "metadata": {
+    "min_required_source": 3,
+    "fragmentation_depth": 2,
+    "indirection_depth": 2,
+    "noise_level": 0
+  },
+  "canonical_answer": {
+    "meeting_slots": [
+      {
+        "date": "2025-12-02",
+        "slot": "14:00-14:45"
+      },
+      {
+        "date": "2025-12-03",
+        "slot": "13:00-13:45"
+      }
+    ]
+  },
+  "agent_result": {
+    "task_id": "example_planning_001",
+    "final_answer": "The best meeting time for Alice, Bob, and Carol next week is on December 2, 2025, from 13:00 to 13:45.",
+    "rationale": "- I first searched for the contact information of Alice, Bob, and Carol to obtain their email addresses.\n- Using the email addresses, I queried their calendars for common free time slots during the week of December 1 to December 7, 2025.\n- The query returned several available time slots where all three participants are free. The earliest available slot is on December 2, 2025, from 13:00 to 13:45, which I selected as the meeting time.\n- This approach ensures that the selected time is convenient for all participants based on their current calendar availability.",
+    "tool_calls": [
+      {
+        "step": 1,
+        "tool_name": "contacts_search_by_name",
+        "arguments": {
+          "name": "Alice"
+        },
+        "result": {
+          "contacts": [
+            {
+              "name": "Alice",
+              "email": "alice@example.com"
+            }
+          ]
+        }
+      },
+      {
+        "step": 2,
+        "tool_name": "contacts_search_by_name",
+        "arguments": {
+          "name": "Bob"
+        },
+        "result": {
+          "contacts": [
+            {
+              "name": "Bob",
+              "email": "bob@example.com"
+            }
+          ]
+        }
+      },
+      {
+        "step": 3,
+        "tool_name": "contacts_search_by_name",
+        "arguments": {
+          "name": "Carol"
+        },
+        "result": {
+          "contacts": [
+            {
+              "name": "Carol",
+              "email": "carol@example.com"
+            }
+          ]
+        }
+      },
+      {
+        "step": 4,
+        "tool_name": "calendar_query_freebusy",
+        "arguments": {
+          "email_addresses": [
+            "alice@example.com",
+            "bob@example.com",
+            "carol@example.com"
+          ],
+          "start_date": "2025-12-01",
+          "end_date": "2025-12-07"
+        },
+        "result": {
+          "time_slots": [
+            {
+              "date": "2025-12-02",
+              "slot": "14:00-14:45",
+              "participants": [
+                "alice@example.com",
+                "bob@example.com",
+                "carol@example.com"
+              ]
+            },
+            {
+              "date": "2025-12-02",
+              "slot": "13:00-13:45",
+              "participants": [
+                "alice@example.com",
+                "bob@example.com",
+                "carol@example.com"
+              ]
+            },
+            {
+              "date": "2025-12-02",
+              "slot": "15:00-15:45",
+              "participants": [
+                "alice@example.com",
+                "bob@example.com",
+                "carol@example.com"
+              ]
+            },
+            {
+              "date": "2025-12-02",
+              "slot": "16:00-16:45",
+              "participants": [
+                "alice@example.com",
+                "bob@example.com",
+                "carol@example.com"
+              ]
+            },
+            {
+              "date": "2025-12-03",
+              "slot": "13:00-13:45",
+              "participants": [
+                "alice@example.com",
+                "bob@example.com",
+                "carol@example.com"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "validation_errors": [],
+  "scores": {
+    "answer_requirements_satisfaction": 0.0
+  }
+}

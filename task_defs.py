@@ -14,9 +14,9 @@ class Task:
     id: str
     category: str
     task_description: str
-    ground_answer_text: str
     canonical_answer: Optional[Dict[str, Any]]
     metadata: Dict[str, int]
+    current_date: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Task":
@@ -25,21 +25,23 @@ class Task:
             id=data["id"],
             category=data["category"],
             task_description=data["task_description"],
-            ground_answer_text=data["ground_answer_text"],
             canonical_answer=data.get("canonical_answer"),
-            metadata=data["metadata"]
+            metadata=data["metadata"],
+            current_date=data.get("current_date")
         )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert Task to dictionary."""
-        return {
+        result = {
             "id": self.id,
             "category": self.category,
             "task_description": self.task_description,
-            "ground_answer_text": self.ground_answer_text,
             "canonical_answer": self.canonical_answer,
             "metadata": self.metadata
         }
+        if self.current_date:
+            result["current_date"] = self.current_date
+        return result
 
     def is_planning(self) -> bool:
         """Check if task is a planning task."""
@@ -84,8 +86,6 @@ def validate_task(task: Task) -> List[str]:
         errors.append("Task category is required")
     if not task.task_description:
         errors.append("Task description is required")
-    if not task.ground_answer_text:
-        errors.append("Ground answer text is required")
     if not task.metadata:
         errors.append("Task metadata is required")
 
@@ -100,6 +100,8 @@ def validate_task(task: Task) -> List[str]:
     for field in required_metadata_fields:
         if field not in task.metadata:
             errors.append(f"Missing metadata field: {field}")
+        elif not isinstance(task.metadata[field], int):
+            errors.append(f"Metadata field '{field}' must be an integer, got {type(task.metadata[field]).__name__}")
 
     # Planning task canonical_answer validation
     if task.is_planning():
@@ -144,4 +146,45 @@ def is_document(task: Task) -> bool:
 def is_email_reply(task: Task) -> bool:
     """Helper predicate: is this an email reply task?"""
     return task.is_email_reply()
+
+
+def get_planning_meeting_slots(task: Task) -> List[Dict[str, str]]:
+    """
+    Extract meeting slots from a planning task's canonical_answer.
+    
+    Args:
+        task: The task to extract slots from
+        
+    Returns:
+        List of dicts with "date" and "slot" keys (strings).
+        Returns empty list if task is not planning or canonical_answer is None/malformed.
+        
+    Raises:
+        ValueError: If canonical_answer structure is malformed (should be caught by validate_task)
+    """
+    if task.category != "planning":
+        return []
+    
+    if task.canonical_answer is None:
+        return []
+    
+    if "meeting_slots" not in task.canonical_answer:
+        raise ValueError("Planning task canonical_answer must have 'meeting_slots' field")
+    
+    slots = task.canonical_answer["meeting_slots"]
+    if not isinstance(slots, list):
+        raise ValueError("meeting_slots must be a list")
+    
+    result = []
+    for slot in slots:
+        if not isinstance(slot, dict):
+            raise ValueError("Each meeting_slots entry must be a dict")
+        if "date" not in slot or "slot" not in slot:
+            raise ValueError("Each meeting_slots entry must have 'date' and 'slot' fields")
+        result.append({
+            "date": str(slot["date"]),
+            "slot": str(slot["slot"])
+        })
+    
+    return result
 
