@@ -1,0 +1,45 @@
+{
+  "folders": [
+    {
+      "folder_id": "folder_000",
+      "name": "Documents",
+      "parent_folder_id": null
+    },
+    {
+      "folder_id": "folder_001",
+      "name": "Projects",
+      "parent_folder_id": null
+    },
+    {
+      "folder_id": "folder_002",
+      "name": "Team",
+      "parent_folder_id": null
+    }
+  ],
+  "files": [
+    {
+      "file_id": "file_000",
+      "folder_id": "folder_000",
+      "name": "API Design Doc",
+      "text": "There was a discussion about the previous plan, Alice mentioned it."
+    },
+    {
+      "file_id": "file_001",
+      "folder_id": "folder_000",
+      "name": "Project Planning",
+      "text": "We had scheduled 2025-11-24 12:00-12:45, but that's been canceled."
+    },
+    {
+      "file_id": "file_002",
+      "folder_id": "folder_000",
+      "name": "Meeting Notes",
+      "text": "There was a discussion about the previous plan, Alice mentioned it."
+    },
+    {
+      "file_id": "file_003",
+      "folder_id": "folder_000",
+      "name": "Team Sync Agenda",
+      "text": "We had scheduled 2025-11-26 11:30-12:15, but that's been canceled."
+    }
+  ]
+}

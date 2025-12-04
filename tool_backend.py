@@ -317,23 +317,6 @@ class ToolBackend:
         else:
             return {"error": f"Channel with channel_id '{channel_id}' not found"}
 
-    def contacts_search_by_name(self, name: str, limit: Optional[int] = None) -> Dict[str, Any]:
-        """Search contacts by name."""
-        contacts_data = self._load_source("contacts")
-        contacts = contacts_data.get("contacts", [])
-        
-        # Case-insensitive substring match
-        matches = []
-        name_lower = name.lower()
-        for contact in contacts:
-            contact_name = contact.get("name", "")
-            if name_lower in contact_name.lower():
-                matches.append(contact)
-                if limit and len(matches) >= limit:
-                    break
-        
-        return {"contacts": matches}
-
     def gmail_list_threads(self, query: Optional[str] = None, limit: Optional[int] = None) -> Dict[str, Any]:
         """
         List Gmail threads, optionally filtered by search query.

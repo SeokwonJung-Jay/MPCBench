@@ -81,3 +81,8 @@ ENV/
 env/
 .venv
 
+# Documentation files (internal development notes)
+CODE_READING_GUIDE.md
+LLM_GENERATION_EXPLANATION.md
+REFACTORING_PLAN.md
+

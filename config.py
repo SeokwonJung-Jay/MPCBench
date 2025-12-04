@@ -38,6 +38,23 @@ LOGS_DIR.mkdir(exist_ok=True)
 
 # Cache for configs
 _generator_config_cache = None
+_model_config_cache = None
+
+
+def get_model_config() -> dict:
+    """Load and cache model config from model_config.json."""
+    global _model_config_cache
+    if _model_config_cache is None:
+        import json
+        with open(MODEL_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            _model_config_cache = json.load(f)
+    return _model_config_cache
+
+
+def get_data_generation_model() -> str:
+    """Get the model name for data generation from model_config.json."""
+    model_config = get_model_config()
+    return model_config.get("data_generation_model", "gpt-4o")
 
 
 def get_generator_config() -> dict:

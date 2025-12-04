@@ -1,21 +1,66 @@
 {
     "agent": {
-    "system_message": "You are a helpful workplace assistant that has access to multiple data sources (Slack, Gmail, Calendar, Contacts, Jira, Drive) through function calling tools. You MUST use these tools to gather information before providing answers. The tools are available and ready to use - call them when you need to check calendars, search contacts, query Slack messages, check Jira issues, search Drive files, or read Gmail threads. Do not claim you don't have access - the tools are provided to you and you should use them."
+        "system_message": {
+            "minimal": "You are a helpful workplace assistant that has access to multiple data sources (Slack, Gmail, Calendar, Jira, Drive) through function calling tools. You MUST use these tools to gather information before providing answers.",
+            "detailed": "You are a helpful workplace assistant that has access to multiple data sources (Slack, Gmail, Calendar, Jira, Drive) through function calling tools. You MUST use these tools to gather information before providing answers. The tools are available and ready to use - call them when you need to check calendars, query Slack messages, check Jira issues, search Drive files, or read Gmail threads. Do not claim you don't have access - the tools are provided to you and you should use them. When solving tasks, consider information from multiple sources and make decisions based on a comprehensive view of all available data."
+        },
+        "user_message_instructions": {
+            "minimal": {
+                "tool_list": "You have access to the following tools: {tool_names}.",
+                "tool_usage": "IMPORTANT: You MUST use the available tools to gather information before providing your final answer. Do not provide an answer without first calling the relevant tools to check calendars and other data sources.",
+                "response_format": "After you have gathered all necessary information using the tools, provide your final answer in the following format:\n\nFinal Answer:\n[Your final answer here]\n\nRationale:\n[Your explanation here, including:\n- Which tools you used and why\n- What information you found from each source\n- How you applied any constraints or filters\n- Why you selected the final answer]"
+            },
+            "detailed": {
+                "tool_list": "You have access to the following tools: {tool_names}.",
+                "tool_usage": "IMPORTANT: You MUST use the available tools to gather information before providing your final answer. Do not provide an answer without first calling the relevant tools to check calendars and other data sources.",
+                "date_range_hint": "If you're unsure about the exact date range, you can call calendar_query_freebusy without specifying start_date and end_date to search all available dates. This is often more reliable than guessing dates.",
+                "calendar_warning": "The calendar data may not include all scheduling constraints. Other sources (Jira, Drive, Slack, Gmail) may contain additional information about time conflicts or constraints that are not reflected in the calendar. Always check these other sources to ensure a time slot is truly available and not excluded by other constraints.",
+                "response_format": "After you have gathered all necessary information using the tools, provide your final answer in the following format:\n\nFinal Answer:\n[Your final answer here]\n\nRationale:\n[Your explanation here, including:\n- Which tools you used and why\n- What information you found from each source\n- How you applied any constraints or filters\n- Why you selected the final answer]"
+            }
+        }
     },
     "judge": {
     "system_prompt": "You are an evaluator that scores agent responses based on answer requirements satisfaction and source-grounded reasoning."
   },
   "data_generation": {
-    "calendar": "Generate realistic calendar data for the given task.",
-    "slack": "Generate realistic Slack messages for the given task.",
-    "contacts": "Generate realistic contact information for the given task.",
-    "gmail": "Generate realistic Gmail threads for the given task.",
-    "jira": "Generate realistic Jira issues for the given task.",
-    "drive": "Generate realistic Drive files for the given task."
+    "system_message": "You are a data generator that creates realistic workplace data. Generate natural, realistic content that meets the specified requirements.",
+    "user_prompt_template": {
+      "instructions": "Generate realistic, natural content that:",
+      "requirements": [
+        "Each piece is incomplete on its own (fragmentation_depth >= 2)",
+        "When combined, the distractor slots are excluded but canonical slots remain",
+        "References the linked source appropriately (if indirection_depth >= 2)",
+        "Uses natural language (not explicit rules)"
+      ],
+      "format_instructions": {
+        "slack": "Return exactly {fragmentation_depth} messages. Format:\n- JSON array: [\"Message 1\", \"Message 2\", ...]\n- OR newline-separated: Message 1\\nMessage 2\\n...\nEach message should be incomplete on its own but together exclude the distractor slots.",
+        "jira": "Return exactly {fragmentation_depth} issues. Format:\n- JSON array: [{\"summary\": \"...\", \"description\": \"...\"}, ...]\n- OR newline-separated: Summary 1\\nSummary 2\\n...\nEach issue should be incomplete on its own but together exclude the distractor slots.",
+        "drive": "Return exactly {fragmentation_depth} file contents. Format:\n- JSON array: [{\"name\": \"...\", \"text\": \"...\"}, ...]\n- OR newline-separated: Content 1\\nContent 2\\n...\nEach file content should be incomplete on its own but together exclude the distractor slots.",
+        "gmail": "Return exactly {fragmentation_depth} email messages. Format:\n- JSON array: [{\"text\": \"...\"}, ...]\n- OR newline-separated: Message 1\\nMessage 2\\n...\nEach message should be incomplete on its own but together exclude the distractor slots."
+      }
+    },
+    "source_descriptions": {
+      "calendar": "Generate realistic calendar data for the given task.",
+      "slack": "Generate realistic Slack messages for the given task.",
+      "gmail": "Generate realistic Gmail threads for the given task.",
+      "jira": "Generate realistic Jira issues for the given task.",
+      "drive": "Generate realistic Drive files for the given task."
+    },
+    "validation": {
+      "system_message": "You are a validator that checks if generated data meets requirements.",
+      "check_instructions": "Check:\n- Is each piece incomplete on its own? (fragmentation_depth >= 2)\n- When combined, are distractor slots excluded but canonical slots remain?\n- Is the content natural and realistic?\n- Are linked source references correct? (if applicable)",
+      "response_format": "Respond with \"VALID\" if all checks pass, or \"INVALID: <reason>\" if any check fails."
+    }
   },
   "generator": {
     "fallback_names": ["Alice", "Bob", "Carol", "Dave", "Eve"],
     "email_domain": "example.com",
+    "linked_source_id_patterns": {
+      "jira_issue_key": "{project_key}-{num}",
+      "slack_channel_id": "channel_{num:03d}",
+      "drive_file_id": "file_{num:03d}",
+      "gmail_thread_id": "thread_{num:03d}"
+    },
     "slack": {
       "default_channel": "general",
       "base_user_names": ["alice", "bob", "carol", "dave", "eve"],
@@ -39,9 +84,6 @@
         "The '{doc_title}' has the meeting details we agreed on.",
         "Refer to '{doc_title}' for the meeting schedule."
       ]
-    },
-    "contacts": {
-      "contact_name_patterns": ["{name}"]
     },
     "jira": {
       "project_keys": ["API", "DOC", "PROJ", "TEAM"],
@@ -75,7 +117,12 @@
       ]
     },
     "calendar": {
-      "calendar_names": ["Primary Calendar", "Work Calendar"]
+      "timestamp_patterns": [
+        "2025-11-20T09:00:00Z",
+        "2025-11-20T10:00:00Z",
+        "2025-11-20T11:00:00Z",
+        "2025-11-21T09:00:00Z"
+      ]
     },
     "gmail": {
       "from_candidates": ["alice@example.com", "bob@example.com", "carol@example.com"],
@@ -93,12 +140,6 @@
         "The {date} {slot} time slot has been canceled.",
         "We can't use {date} {slot}; please pick another time.",
         "{date} {slot} won't work for me anymore."
-      ],
-      "timestamp_patterns": [
-        "2025-11-20T09:00:00Z",
-        "2025-11-20T10:00:00Z",
-        "2025-11-20T11:00:00Z",
-        "2025-11-21T09:00:00Z"
       ]
     }
   },
@@ -126,10 +167,6 @@
     "slack_get_channel": {
       "minimal": "Get channel information by channel_id.",
       "detailed": "Get channel information by channel_id. Returns: {\"channel_id\": str, \"name\": str}.\n\nUse cases:\n- After listing channels, you may want to verify details about a specific channel before searching or listing its messages.\n- Channel names can help you identify which channels are most likely to contain relevant information for your task.\n- This is typically used as a verification step after slack_list_channels() to confirm you have the correct channel.\n\nExample: slack_get_channel(channel_id='channel_001') to get details about a specific channel."
-    },
-    "contacts_search_by_name": {
-      "minimal": "Search contacts by name.",
-      "detailed": "Search contacts by name. Returns: {\"contacts\": [{\"name\": str, \"email\": str}]}.\n\nUse cases:\n- When a task mentions participant names (e.g., \"Find a meeting time for Alice, Bob, and Carol\"), you need their email addresses to check their calendars.\n- Calendar functions require email addresses, not just names. This function helps you convert names to email addresses.\n- If you're planning a meeting with specific people, you'll typically need to search for their contact information first before querying their calendars.\n\nExample: contacts_search_by_name(name='Alice') to find Alice's contact information, which you can then use with calendar functions."
     },
     "gmail_list_threads": {
       "minimal": "List Gmail threads, optionally filtered by search query.",

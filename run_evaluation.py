@@ -31,8 +31,6 @@ def main():
             result = evaluate_task(task, generate_data=True, tool_context_mode=args.tool_context_mode)
             print(f"\n✓ Evaluation complete!")
             print(f"  Answer score: {result['scores']['answer_requirements_satisfaction']}")
-            if result['validation_errors']:
-                print(f"  ⚠️  Validation errors: {len(result['validation_errors'])}")
         else:
             # Both modes
             print(f"Evaluating task: {task.id} (both modes)")
@@ -41,8 +39,6 @@ def main():
                 try:
                     result = evaluate_task(task, generate_data=True, tool_context_mode=mode)
                     print(f"  ✓ Answer score: {result['scores']['answer_requirements_satisfaction']}")
-                    if result['validation_errors']:
-                        print(f"  ⚠️  Validation errors: {len(result['validation_errors'])}")
                 except Exception as e:
                     print(f"  ⚠️  Error: {e}")
     else:
@@ -70,8 +66,6 @@ def main():
                 task_id, model = parts
                 print(f"\n{task_id} ({model}):")
             print(f"  Answer score: {result['scores']['answer_requirements_satisfaction']}")
-            if result['validation_errors']:
-                print(f"  ⚠️  Validation errors: {len(result['validation_errors'])}")
 
 if __name__ == "__main__":
     main()

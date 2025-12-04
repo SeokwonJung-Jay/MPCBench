@@ -12,7 +12,6 @@ MPCBench v2 takes a **task-first** approach: tasks are defined with their requir
 
 - **`task_defs.py`**: Task definition loading and validation
 - **`data_gen.py`**: Generation of per-task source data
-- **`oracle_validator.py`**: Validates consistency of generated data against ground answers
 - **`tool_backend.py`**: Exposes generated sources as tools to the agent
 - **`agent_runner.py`**: Runs a single task with an agent
 - **`evaluate.py`**: Runs evaluation over many tasks and computes scores
@@ -81,9 +80,11 @@ The data generator uses a library of constraint templates to create realistic mu
 - **T_GMAIL_CANCEL_SLOT**: Gmail cancels **distractor slots only** (never canonical) - e.g., "We can't do {date} {slot} anymore."
 
 Templates are selected based on `indirection_depth` and `min_required_source`:
-- **depth=1**: T_CAL_UNIQUE only
-- **depth=2**: T_CAL_MULTI_CANDIDATES + one of T_SLACK_FILTER_TIME, T_SLACK_FILTER_WEEKDAY, or T_JIRA_CONFLICT_SLOT
-- **depth≥3**: Multi-hop patterns combining constraints across multiple sources (Jira/Drive/Gmail only eliminate distractors, never state canonical time)
+- **depth=1**: T_CAL_UNIQUE only (Calendar provides unique solution)
+- **depth=2**: T_CAL_MULTI_CANDIDATES + one or more constraint sources (Slack, Jira, Drive, Gmail) with unidirectional linking
+- **depth≥3**: Multi-hop patterns combining constraints across multiple sources (chain linking: A → B → C). Jira/Drive/Gmail only eliminate distractors, never state canonical time
+
+**Fragmentation depth behavior**: For `fragmentation_depth >= 2`, each distractor assigned to a source gets `fragmentation_depth` incomplete messages/entries that must be combined to remove that distractor. The total number of messages/entries = `fragmentation_depth * len(assigned_distractors)`.
 
 ## Usage
 
@@ -231,15 +232,41 @@ MPCBench/
 ├── config.py                  # Global configuration
 ├── task_defs.py               # Task loading and validation
 ├── data_gen.py                # Source data generation (constraint templates)
-├── oracle_validator.py        # Data consistency validation
 ├── tool_backend.py            # Tool interface to source data
 ├── agent_runner.py            # Single task execution (OpenAI tools)
 ├── evaluate.py                # Evaluation runner
 ├── model_config.json          # Model settings
-├── prompt_config.json         # LLM prompts
-├── generator_config.json      # Data generation templates and defaults
+├── prompt_config.json         # LLM prompts and data generation config
 └── README.md                  # This file
 ```
+
+## Data Generation Goals
+
+The data generation system is designed to create diverse, realistic multi-source scenarios for evaluating LLM agents. The goals are:
+
+### 1. Normalization through Diverse Data Combinations
+- **Various source combinations**: Generate data using different combinations of sources (Slack, Jira, Drive, Gmail) to test agents' ability to compose information from multiple sources
+- **Various difficulty combinations**: Create tasks with different combinations of `fragmentation_depth`, `indirection_depth`, and `min_required_source` to test agents under varying complexity levels
+- **Consistent data structure**: All generated data follows a consistent structure, enabling fair comparison across different scenarios
+
+### 2. Difficulty Control Mechanisms
+- **`fragmentation_depth`**: Controls how data is fragmented within a single source
+  - `1`: All information in a single message/entry (complete on its own)
+  - `2`: Information split across 2 messages/entries (each incomplete, must be combined)
+  - `3+`: Information split across 3+ messages/entries (all must be combined to understand)
+- **`indirection_depth`**: Controls how many sources must be combined
+  - `1`: Single source (Calendar only, no linking)
+  - `2`: Two sources linked (e.g., Slack → Jira, where Slack references a Jira issue)
+  - `3+`: Multi-hop chains across 3+ sources (e.g., Slack → Jira → Drive)
+- **`min_required_source`**: Minimum number of distinct sources needed (excluding Calendar)
+  - Determines how many additional sources (Slack, Jira, Drive, Gmail) must be used
+  - Each source removes specific distractor slots, making canonical slots unique
+
+### 3. Rigor in Ground Truth-Source Alignment
+- **Canonical slot uniqueness**: Generated constraints ensure that canonical slots are the only valid answers
+- **Distractor elimination**: Each source removes specific distractor slots while preserving canonical slots
+- **Constraint-only sources**: Jira, Drive, and Gmail never explicitly state the canonical time - they only provide constraints (ranges or exclusions) that eliminate distractors
+- **Natural constraint expression**: Constraints are expressed naturally (e.g., "afternoons after 14:00" in Slack, "conflict at 13:00" in Jira) rather than as explicit rules
 
 ## Planning Pipeline
 
@@ -247,44 +274,58 @@ The end-to-end pipeline for planning tasks:
 
 1. **Task Definition** (`task_defs.py`): Load task JSON with `canonical_answer` and `metadata`
 2. **Data Generation** (`data_gen.py`): 
-   - Extract participant names from `task_description` using heuristics, or use `fallback_names` from `generator_config.json`
+   - Extract participant names from `task_description` using heuristics, or use `fallback_names` from `prompt_config.json`
    - Generate participant emails using `email_domain` from config
+   - **LLM-based content generation**: Slack, Jira, Drive, and Gmail content is generated using LLM (specified in `model_config.json`'s `data_generation_model`)
+     - LLM generates natural, realistic content that meets fragmentation and indirection requirements
+     - Generated content is validated by another LLM call to ensure it meets criteria (incompleteness, constraint application, linked source references)
+     - Falls back to template-based generation if LLM validation fails after retries
+   - **Calendar generation**: Remains logic-based (structured data with free/busy slots)
    - Apply constraint templates based on `indirection_depth` and `min_required_source`:
      - **depth=1**: Calendar only (T_CAL_UNIQUE)
-     - **depth=2**: Calendar + Slack/Jira constraints (Pattern 2A/2B/2C)
-     - **depth≥3**: Multi-hop patterns with constraint-only sources (Pattern 3A/3B/3C)
+     - **depth=2**: Calendar + Slack/Jira/Drive/Gmail constraints (unidirectional linking)
+     - **depth≥3**: Multi-hop patterns with constraint-only sources (chain linking)
    - **Jira/Drive/Gmail never explicitly state canonical time** - they only eliminate distractor slots or provide range constraints
-   - All text content comes from `generator_config.json` templates (no hard-coded strings)
+   - All prompts and templates come from `prompt_config.json` (no hard-coded strings)
    - Raises `ValueError` if required config entries are missing (no silent fallbacks)
-   - Generate calendar, slack, jira, drive, gmail, contacts JSON files
-3. **Oracle Validation** (`oracle_validator.py`): 
-   - Derive participants dynamically from calendar data
-   - Verify canonical slots are free for all participants
-4. **Tool Backend** (`tool_backend.py`): Expose generated sources as queryable tools (generic search/filter logic)
-5. **Agent Execution** (`agent_runner.py`): 
+   - Generate calendar, slack, jira, drive, gmail JSON files
+3. **Tool Backend** (`tool_backend.py`): Expose generated sources as queryable tools (generic search/filter logic)
+4. **Agent Execution** (`agent_runner.py`): 
    - OpenAI function-calling agent iteratively uses tools
    - Produces `final_answer`, `rationale`, and `tool_calls` log
-6. **Evaluation** (`evaluate.py`): Score agent answer against `canonical_answer` (substring matching for date and slot)
+5. **Evaluation** (`evaluate.py`): Score agent answer against `canonical_answer` (substring matching for date and slot)
 
 ## Configuration
 
-### `generator_config.json`
+### `prompt_config.json`
 
-All data-specific content (names, emails, templates, timestamps) lives in `generator_config.json`:
+All data-specific content (names, emails, templates, timestamps) and LLM prompts live in `prompt_config.json`:
 
+**Generator Config** (under `generator` key):
 - **Global**: `fallback_names`, `email_domain`
 - **Slack**: `base_user_names`, `time_filter_templates`, `weekday_filter_templates`, `doc_reference_templates`
 - **Jira**: `project_keys`, `conflict_templates`
-- **Drive**: `doc_title_templates`, `doc_time_positive_templates`, `doc_time_negative_templates`
-- **Gmail**: `from_candidates`, `to_candidates`, `subject_templates`, `confirmation_templates`, `cancellation_templates`, `timestamp_patterns`
+- **Drive**: `doc_title_templates`, `doc_time_negative_templates`
+- **Gmail**: `from_candidates`, `to_candidates`, `subject_templates`, `cancellation_templates`
+- **Calendar**: `timestamp_patterns` (used by all sources)
 
-No Python code contains hard-coded names, emails, project names, or timestamps.
+**LLM Data Generation** (under `data_generation` key):
+- **System messages**: For data generation and validation LLMs
+- **User prompt templates**: Instructions, requirements, and format specifications for each source type
+- **Source descriptions**: Brief descriptions for each source type (Slack, Jira, Drive, Gmail)
+- **Validation prompts**: Check instructions and response format for LLM-based validation
+
+**Agent Prompts** (under `agent` key):
+- **System messages**: Minimal and detailed versions for different tool context modes
+- **User message instructions**: Tool usage guidance, response format, calendar warnings
+
+No Python code contains hard-coded names, emails, project names, timestamps, or prompt text.
 
 ## Design Principles
 
 1. **Task-First**: Tasks define requirements; source data is generated to support them
 2. **No Personas**: Personalization emerges from source content, not pre-defined personas
-3. **No Hard-Coded Data**: All names, emails, projects, labels come from `generator_config.json` or are derived from `task_description`/`canonical_answer`. Missing config entries raise `ValueError` (no silent fallbacks)
+3. **No Hard-Coded Data**: All names, emails, projects, labels come from `prompt_config.json` generator section or are derived from `task_description`/`canonical_answer`. Missing config entries raise `ValueError` (no silent fallbacks)
 4. **Constraint Templates**: Reusable templates create realistic multi-source scenarios. Jira/Drive/Gmail provide constraints only (never explicitly state canonical time)
 5. **Canonical Answer Only**: Scoring uses only `canonical_answer` (no `ground_answer_text`)
 6. **Dynamic Participants**: Participants are extracted from `task_description` or generated from config, never hard-coded
@@ -294,4 +335,15 @@ No Python code contains hard-coded names, emails, project names, or timestamps.
 
 - Python 3.8+
 - OpenAI API key (set `OPENAI_API_KEY` environment variable)
+
+## TODO
+
+### Data Generation
+- [ ] Support team-based tasks (e.g., "Find a meeting time for our team")
+- [ ] Currently only planning tasks are supported. When adding email/document evaluation, add corresponding functions and ensure they don't conflict
+- [ ] Add noise - generate distractor data unrelated to constraints
+
+### Evaluation
+- [ ] Consider rationale in scoring system
+- [ ] Adjust penalty ratio for extra slots
 
