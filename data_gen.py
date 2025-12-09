@@ -78,14 +78,14 @@ def generate_with_llm(
     format_instructions = user_prompt_template.get("format_instructions", {})
     
     # Build prompt
+    # Note: Do NOT include canonical slots in the prompt - only distractor elimination info
+    # Canonical slots are only checked during validation to ensure they are not excluded
     prompt_parts = [
         source_description,
         "",
         f"Task: {task_description}",
         "",
         f"Participants: {', '.join([p['name'] for p in participants])}",
-        "",
-        f"Canonical slots (must NOT be excluded): {', '.join([s['date'] + ' ' + s['slot'] for s in all_canonical_slots])}",
         "",
         f"Distractor slots to exclude: {', '.join([s['date'] + ' ' + s['slot'] for s in assigned_distractors])}",
         "",
@@ -134,6 +134,14 @@ def generate_with_llm(
         temperature=0.7
     )
     
+    # Track token usage (stored in module-level variable)
+    if response.usage:
+        if not hasattr(generate_with_llm, '_token_usage'):
+            generate_with_llm._token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        generate_with_llm._token_usage["prompt_tokens"] += response.usage.prompt_tokens
+        generate_with_llm._token_usage["completion_tokens"] += response.usage.completion_tokens
+        generate_with_llm._token_usage["total_tokens"] += response.usage.total_tokens
+    
     return response.choices[0].message.content.strip()
 
 
@@ -177,8 +185,8 @@ Generated content:
 
 Requirements:
 1. Fragmentation depth: {fragmentation_depth} - content should be split into {fragmentation_depth} incomplete pieces
-2. Canonical slots (must NOT be excluded): {canonical_slots_str}
-3. Distractor slots (must be excluded): {distractor_slots_str}
+2. Distractor slots (must be excluded): {distractor_slots_str}
+3. Canonical slots (must NOT be excluded - verify they are not mentioned as excluded): {canonical_slots_str}
 """
     
     if indirection_depth >= 2 and linked_source and linked_source_id:
@@ -198,6 +206,14 @@ Requirements:
         ],
         temperature=0.0
     )
+    
+    # Track token usage (stored in module-level variable)
+    if response.usage:
+        if not hasattr(validate_generated_data, '_token_usage'):
+            validate_generated_data._token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        validate_generated_data._token_usage["prompt_tokens"] += response.usage.prompt_tokens
+        validate_generated_data._token_usage["completion_tokens"] += response.usage.completion_tokens
+        validate_generated_data._token_usage["total_tokens"] += response.usage.total_tokens
     
     result = response.choices[0].message.content.strip()
     
@@ -1325,7 +1341,7 @@ def generate_gmail(
     return threads
 
 
-def generate_source_data(task: Task, output_dir: Path) -> Dict[str, Path]:
+def generate_source_data(task: Task, output_dir: Path) -> Tuple[Dict[str, Path], Dict[str, int]]:
     """
     Generate source data files for a task.
     
@@ -1334,7 +1350,7 @@ def generate_source_data(task: Task, output_dir: Path) -> Dict[str, Path]:
         output_dir: Directory to write generated data files
         
     Returns:
-        Dictionary mapping source names to file paths
+        Tuple of (dictionary mapping source names to file paths, token usage dict)
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     
@@ -1342,12 +1358,12 @@ def generate_source_data(task: Task, output_dir: Path) -> Dict[str, Path]:
         return generate_planning_source_data(task, output_dir)
     elif task.is_document() or task.is_email_reply():
         # TODO: Implement richer generation for document and email_reply tasks
-        return {}
+        return {}, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     else:
-        return {}
+        return {}, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
 
-def generate_planning_source_data(task: Task, output_dir: Path) -> Dict[str, Path]:
+def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[str, Path], Dict[str, int]]:
     """
     [Main function] Orchestration function that generates all source data for a planning task.
     
@@ -1371,6 +1387,12 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Dict[str, Pat
     output_dir.mkdir(parents=True, exist_ok=True)
     source_data = {}
     generator_config = get_generator_config()
+    
+    # Reset token usage tracking
+    if hasattr(generate_with_llm, '_token_usage'):
+        generate_with_llm._token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    if hasattr(validate_generated_data, '_token_usage'):
+        validate_generated_data._token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     
     # Add task description to generator_config for LLM-based generation
     generator_config["_task_description"] = task.task_description
@@ -1873,4 +1895,19 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Dict[str, Pat
                     actual_id = extract_source_id("gmail", gmail_threads)
                     update_linked_source_ids("gmail", actual_id)
     
-    return source_data
+    # Collect token usage
+    token_usage = {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+    }
+    if hasattr(generate_with_llm, '_token_usage'):
+        token_usage["prompt_tokens"] += generate_with_llm._token_usage["prompt_tokens"]
+        token_usage["completion_tokens"] += generate_with_llm._token_usage["completion_tokens"]
+        token_usage["total_tokens"] += generate_with_llm._token_usage["total_tokens"]
+    if hasattr(validate_generated_data, '_token_usage'):
+        token_usage["prompt_tokens"] += validate_generated_data._token_usage["prompt_tokens"]
+        token_usage["completion_tokens"] += validate_generated_data._token_usage["completion_tokens"]
+        token_usage["total_tokens"] += validate_generated_data._token_usage["total_tokens"]
+    
+    return source_data, token_usage

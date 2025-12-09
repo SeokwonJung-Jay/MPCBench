@@ -28,7 +28,7 @@
       "instructions": "Generate realistic, natural content that:",
       "requirements": [
         "Each piece is incomplete on its own (if fragmentation_depth >= 2)",
-        "When combined, the distractor slots are excluded but canonical slots remain",
+        "When combined, the distractor slots are excluded",
         "References the linked source appropriately (if indirection_depth >= 2)",
         "The content is realistic and natural depending on the source"
       ],
