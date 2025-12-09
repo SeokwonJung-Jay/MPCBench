@@ -52,6 +52,7 @@ archive/
 # These are generated artifacts from world_state_generator and run_generation
 data/
 evaluation/logs/
+logs/
 
 # Generation tools (one-time use scripts)
 generation_tools/
