@@ -337,31 +337,26 @@ class ToolBackend:
         
         # If query provided, filter threads
         if query:
-            query_lower = query.lower()
+            # Split query into words (word-based search, like actual Gmail API)
+            query_words = [w.strip() for w in query.lower().split() if w.strip()]
             matches = []
             for thread in threads:
                 thread_subject = thread.get("subject", "")
-                # Check subject
-                if query_lower in thread_subject.lower():
+                # Combine thread subject and all message content for search
+                combined_text = thread_subject.lower()
+                for msg in thread.get("messages", []):
+                    msg_subject = msg.get("subject", "")
+                    msg_text = msg.get("text", "")
+                    combined_text += " " + msg_subject.lower() + " " + msg_text.lower()
+                
+                # Check if all query words are present (AND operation, like actual Gmail API)
+                if query_words and all(word in combined_text for word in query_words):
                     matches.append({
                         "thread_id": thread.get("thread_id", ""),
                         "subject": thread_subject
                     })
                     if limit and len(matches) >= limit:
                         break
-                # Check messages in thread
-                else:
-                    for msg in thread.get("messages", []):
-                        msg_subject = msg.get("subject", "")
-                        msg_text = msg.get("text", "")
-                        if query_lower in msg_subject.lower() or query_lower in msg_text.lower():
-                            matches.append({
-                                "thread_id": thread.get("thread_id", ""),
-                                "subject": thread_subject
-                            })
-                            if limit and len(matches) >= limit:
-                                break
-                            break
             return {"threads": matches}
         else:
             # Return all threads (metadata only)
@@ -413,12 +408,17 @@ class ToolBackend:
         
         # If query provided, filter messages
         if query:
-            query_lower = query.lower()
+            # Split query into words (word-based search, like actual Gmail API)
+            query_words = [w.strip() for w in query.lower().split() if w.strip()]
             matches = []
             for msg in all_messages:
                 subject = msg.get("subject", "")
                 text = msg.get("text", "")
-                if query_lower in subject.lower() or query_lower in text.lower():
+                # Combine subject and text for search
+                combined_text = (subject + " " + text).lower()
+                
+                # Check if all query words are present (AND operation, like actual Gmail API)
+                if query_words and all(word in combined_text for word in query_words):
                     matches.append({
                         "message_id": msg.get("message_id", ""),
                         "subject": subject
