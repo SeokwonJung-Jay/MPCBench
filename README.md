@@ -4,7 +4,7 @@ MPCBench is a benchmark for evaluating LLM agents that need to compose informati
 
 ## Overview
 
-MPCBench evaluates how well LLM agents can find and combine information from multiple workplace data sources to solve real-world tasks. The benchmark uses a **task-first approach**: tasks are defined with their requirements and ground truth answers, and source data is generated to support those tasks.
+MPCBench evaluates how well LLM agents can find and combine information from multiple workplace data sources to solve real-world tasks.
 
 ### Key Features
 
@@ -39,6 +39,8 @@ Tasks define the requirements and ground truth answers first. Source data is the
 - Tasks are the primary unit of evaluation
 - Source data serves the task requirements
 - Evaluation focuses on task completion rather than data exploration
+- Controlled difficulty through systematic data generation
+- Reproducible scenarios with known ground truth
 
 #### 2. Realism in Data Format and Style
 
@@ -63,13 +65,6 @@ The benchmark provides fine-grained control over task difficulty through three k
 - **Source requirements**: Controls the minimum number of distinct sources needed
 
 ## Key Concepts
-
-### Task-First Approach
-
-Tasks are defined with their requirements and ground truth answers first. Source data is then generated to support those tasks. This approach enables:
-- Task-centric evaluation focused on completion rather than exploration
-- Controlled difficulty through systematic data generation
-- Reproducible scenarios with known ground truth
 
 ### Fragmentation Depth
 
