@@ -84,7 +84,7 @@ Controls how many sources must be combined:
 - **`indirection_depth = 2`**: Two sources linked (e.g., Slack → Jira, where Slack references a Jira issue)
 - **`indirection_depth = 3+`**: Multi-hop chains across 3+ sources (e.g., Slack → Jira → Drive)
 
-### min_required_source
+### Minimum Required Source
 
 The minimum number of distinct sources (excluding Calendar) needed to solve the task. This parameter:
 - Determines how many additional sources (Slack, Jira, Drive, Gmail) must be used
