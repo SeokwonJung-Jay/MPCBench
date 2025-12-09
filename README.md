@@ -62,10 +62,6 @@ The benchmark provides fine-grained control over task difficulty through three k
 - **Indirection**: Controls how many sources must be combined
 - **Source requirements**: Controls the minimum number of distinct sources needed
 
-#### 5. No Hard-Coded Data
-
-All names, emails, projects, labels, and prompts come from configuration files (`prompt_config.json`) or are derived from task descriptions. Missing config entries raise `ValueError` (no silent fallbacks), ensuring explicit configuration and reproducibility.
-
 ## Key Concepts
 
 ### Task-First Approach
