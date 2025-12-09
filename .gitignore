@@ -47,6 +47,7 @@ __MACOSX/
 
 # Archive (v1 code - cold storage)
 archive/
+*.zip
 
 # Project-specific generated data and logs
 # These are generated artifacts from world_state_generator and run_generation
