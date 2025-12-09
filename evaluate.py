@@ -260,7 +260,6 @@ def evaluate_task(
 
 
 def evaluate_all_tasks(
-    agent_models: List[str] = None,
     generate_data: bool = True,
     tool_context_modes: List[str] = None
 ) -> Dict[str, Any]:
@@ -273,7 +272,6 @@ def evaluate_all_tasks(
         - Print progress
     
     Args:
-        agent_models: List of models to evaluate (None to load from model_config.json)
         generate_data: Whether to generate data if not present
         tool_context_modes: List of tool context modes to evaluate (None for ["minimal", "detailed"])
         
@@ -281,14 +279,13 @@ def evaluate_all_tasks(
         Dictionary of evaluation results for all task-model-mode combinations
         key: "{task_id}__{model}__{mode}"
     """
-    if agent_models is None:
-        # Load from model_config.json
-        try:
-            with open(MODEL_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                model_config = json.load(f)
-                agent_models = model_config.get("agent_models", ["gpt-4o-mini"])
-        except Exception:
-            agent_models = ["gpt-4o-mini"]
+    # Always load all models from model_config.json
+    try:
+        with open(MODEL_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            model_config = json.load(f)
+            agent_models = model_config.get("agent_models", ["gpt-4o-mini"])
+    except Exception:
+        agent_models = ["gpt-4o-mini"]
 
     if tool_context_modes is None:
         tool_context_modes = ["minimal", "detailed"]

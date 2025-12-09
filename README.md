@@ -1,69 +1,119 @@
-# MPCBench v2: Task-First Multi-Source Composition Benchmark
+# MPCBench : Multi-Source Personal Context Composition Benchmark
 
-MPCBench v2 is a benchmark for evaluating LLM agents that need to compose information from multiple workplace data sources (Slack, Gmail, Calendar, Contacts, Jira, Drive) to complete tasks.
+MPCBench is a benchmark for evaluating LLM agents that need to compose information from multiple workplace data sources (Slack, Gmail, Calendar, Jira, Drive) to complete tasks.
 
 ## Overview
 
-MPCBench v2 takes a **task-first** approach: tasks are defined with their requirements and ground answers, and source data is generated to support those tasks. This is in contrast to v1's scenario-first approach.
+MPCBench evaluates how well LLM agents can find and combine information from multiple workplace data sources to solve real-world tasks. The benchmark uses a **task-first approach**: tasks are defined with their requirements and ground truth answers, and source data is generated to support those tasks.
 
-## Architecture
+### Key Features
 
-### Core Components
+- **Multi-source information composition**: Agents must gather and combine information from multiple sources (Slack, Gmail, Calendar, Jira, Drive) to complete tasks
+- **Realistic data formats**: Uses data structures and natural text styles that mirror actual workplace tools
+- **Controlled difficulty**: Configurable complexity through fragmentation, indirection, and source requirements
+- **LLM-based data generation**: Generates natural, realistic content using LLM models
 
-- **`task_defs.py`**: Task definition loading and validation
-- **`data_gen.py`**: Generation of per-task source data
-- **`tool_backend.py`**: Exposes generated sources as tools to the agent
-- **`agent_runner.py`**: Runs a single task with an agent
-- **`evaluate.py`**: Runs evaluation over many tasks and computes scores
+### Evaluation Goals
 
-### Task Schema
+- Assess agents' ability to find information across multiple sources
+- Evaluate agents' capability to combine incomplete information fragments into complete answers
+- Measure performance across varying difficulty levels
+- Test agents' reasoning with constraint-based information (rather than explicit answers)
 
-Each task is defined as a JSON file in the `tasks/` directory with the following structure:
+## Goals & Philosophy
 
-```json
-{
-  "id": "task_001",
-  "category": "planning",
-  "task_description": "Find a meeting time that works for Alice, Bob, and Carol next week.",
-  "canonical_answer": {
-    "meeting_slots": [
-      {
-        "date": "2025-11-25",
-        "slot": "14:00-14:45"
-      }
-    ]
-  },
-  "metadata": {
-    "min_required_source": 2,
-    "fragmentation_depth": 1,
-    "indirection_depth": 2,
-    "noise_level": 0
-  }
-}
-```
+### Benchmark Objectives
 
-**Note**: The only ground truth for scoring is `canonical_answer`. There is no `ground_answer_text` field.
+MPCBench is designed to evaluate LLM agents' capabilities in multi-source information composition scenarios commonly found in workplace environments. The primary goals are:
 
-### Task Categories
+1. **Multi-source information gathering**: Test agents' ability to find relevant information across different workplace data sources
+2. **Information composition**: Evaluate how well agents combine incomplete information fragments from multiple sources
+3. **Difficulty scaling**: Measure performance across varying complexity levels through configurable parameters
+4. **Constraint-based reasoning**: Assess agents' ability to work with constraints and exclusions rather than explicit answers
 
-- **`planning`**: Meeting scheduling tasks (requires `canonical_answer` with `meeting_slots`)
-- **`document`**: Document generation tasks
-- **`email_reply`**: Email reply tasks
+### Design Philosophy
 
-### Metadata Fields
+#### 1. Task-First Approach
 
-- **`min_required_source`**: Minimum number of distinct sources needed to solve the task
-- **`fragmentation_depth`**: How many separate messages/entries contain key facts (1 = all in one entry, higher = more fragmented)
-- **`indirection_depth`**: Number of "hops" across different sources needed (1 = single source, 2 = two sources, 3+ = multi-hop chains)
-- **`noise_level`**: Reserved for future use (currently always 0)
+Tasks define the requirements and ground truth answers first. Source data is then generated to support those tasks, ensuring that:
+- Tasks are the primary unit of evaluation
+- Source data serves the task requirements
+- Evaluation focuses on task completion rather than data exploration
+
+#### 2. Realism in Data Format and Style
+
+While the benchmark uses actual workplace tool data structures and natural text styles, it acknowledges that:
+- **Data formats and structures** mirror real workplace tools (Slack, Jira, Gmail, Calendar, Drive)
+- **Text styles** are generated to be natural and realistic using LLM models
+- **Data generation purpose** is task-oriented (all data supports task completion), which differs from real workplaces where most data is task-unrelated
+- **Information alignment** is perfect (all information is task-relevant), unlike real workplaces with significant noise
+
+#### 3. Rigorous Ground Truth Alignment
+
+- **Canonical answer uniqueness**: Generated constraints ensure that canonical answers are the only valid solutions
+- **Distractor elimination**: Each source removes specific distractor candidates while preserving canonical answers
+- **Constraint-only sources**: Jira, Drive, and Gmail never explicitly state canonical times - they only provide constraints (ranges or exclusions) that eliminate distractors
+- **Natural constraint expression**: Constraints are expressed naturally (e.g., "afternoons after 14:00" in Slack, "conflict at 13:00" in Jira) rather than as explicit rules
+
+#### 4. Difficulty Control Mechanisms
+
+The benchmark provides fine-grained control over task difficulty through three key parameters:
+- **Fragmentation**: Controls how information is distributed within a single source
+- **Indirection**: Controls how many sources must be combined
+- **Source requirements**: Controls the minimum number of distinct sources needed
+
+#### 5. No Hard-Coded Data
+
+All names, emails, projects, labels, and prompts come from configuration files (`prompt_config.json`) or are derived from task descriptions. Missing config entries raise `ValueError` (no silent fallbacks), ensuring explicit configuration and reproducibility.
+
+## Key Concepts
+
+### Task-First Approach
+
+Tasks are defined with their requirements and ground truth answers first. Source data is then generated to support those tasks. This approach enables:
+- Task-centric evaluation focused on completion rather than exploration
+- Controlled difficulty through systematic data generation
+- Reproducible scenarios with known ground truth
+
+### Fragmentation Depth
+
+Controls how information is distributed within a single source:
+
+- **`fragmentation_depth = 1`**: All information in a single message/entry (complete on its own)
+- **`fragmentation_depth = 2`**: Information split across 2 messages/entries (each incomplete, must be combined)
+- **`fragmentation_depth = 3+`**: Information split across 3+ messages/entries (all must be combined to understand)
+
+For `fragmentation_depth >= 2`, each distractor assigned to a source gets `fragmentation_depth` incomplete messages/entries that must be combined to remove that distractor. The total number of messages/entries = `fragmentation_depth * len(assigned_distractors)`.
+
+### Indirection Depth
+
+Controls how many sources must be combined:
+
+- **`indirection_depth = 1`**: Single source (Calendar only, no linking)
+- **`indirection_depth = 2`**: Two sources linked (e.g., Slack → Jira, where Slack references a Jira issue)
+- **`indirection_depth = 3+`**: Multi-hop chains across 3+ sources (e.g., Slack → Jira → Drive)
+
+### min_required_source
+
+The minimum number of distinct sources (excluding Calendar) needed to solve the task. This parameter:
+- Determines how many additional sources (Slack, Jira, Drive, Gmail) must be used
+- Ensures that Calendar alone is insufficient to find the answer
+- Each source removes specific distractor slots, making canonical slots unique
+
+### Distractors and Canonical Answers
+
+- **Canonical Answer**: The unique ground truth answer that must be found
+- **Distractor**: Incorrect candidate answers that must be eliminated
+- **Distractor elimination**: Each source provides constraints that remove specific distractor slots while preserving canonical slots
+- **Constraint-only sources**: Jira, Drive, and Gmail never explicitly state canonical times - they only provide constraints that eliminate distractors
 
 ### Constraint Templates
 
-The data generator uses a library of constraint templates to create realistic multi-source scenarios. **Important**: Jira, Drive, and Gmail **never explicitly state the canonical meeting time**. They only provide constraints (ranges or exclusions) that help narrow down candidate slots.
+The data generator uses a library of constraint templates to create realistic multi-source scenarios:
 
 **Calendar Templates:**
-- **T_CAL_UNIQUE**: Calendar-only unique solution (indirection_depth=1) - canonical slot is the only tri-free slot
-- **T_CAL_MULTI_CANDIDATES**: Multiple free slots in calendar (indirection_depth≥2) - creates ambiguity requiring other sources
+- **T_CAL_UNIQUE**: Calendar-only unique solution (`indirection_depth=1`) - canonical slot is the only tri-free slot
+- **T_CAL_MULTI_CANDIDATES**: Multiple free slots in calendar (`indirection_depth≥2`) - creates ambiguity requiring other sources
 
 **Slack Templates:**
 - **T_SLACK_FILTER_TIME**: Slack provides time-of-day constraints (e.g., "afternoons after 14:00")
@@ -84,7 +134,60 @@ Templates are selected based on `indirection_depth` and `min_required_source`:
 - **depth=2**: T_CAL_MULTI_CANDIDATES + one or more constraint sources (Slack, Jira, Drive, Gmail) with unidirectional linking
 - **depth≥3**: Multi-hop patterns combining constraints across multiple sources (chain linking: A → B → C). Jira/Drive/Gmail only eliminate distractors, never state canonical time
 
-**Fragmentation depth behavior**: For `fragmentation_depth >= 2`, each distractor assigned to a source gets `fragmentation_depth` incomplete messages/entries that must be combined to remove that distractor. The total number of messages/entries = `fragmentation_depth * len(assigned_distractors)`.
+## Architecture
+
+### Core Components
+
+- **`task_defs.py`**: Task definition loading and validation
+- **`data_gen.py`**: Generation of per-task source data
+- **`tool_backend.py`**: Exposes generated sources as tools to the agent
+- **`agent_runner.py`**: Runs a single task with an agent
+- **`evaluate.py`**: Runs evaluation over many tasks and computes scores
+
+### Task Schema
+
+Each task is defined as a JSON file in the `tasks/` directory with the following structure:
+
+```json
+{
+  "category": "planning",
+  "current_date": "2025-11-24",
+  "task_description": "Find a meeting time that works for Alice, Bob, and Carol next week.",
+  "canonical_answer": {
+    "meeting_slots": [
+      {
+        "date": "2025-12-02",
+        "slot": "14:00-14:45"
+      },
+      {
+        "date": "2025-12-03",
+        "slot": "13:00-13:45"
+      }
+    ]
+  },
+  "metadata": {
+    "min_required_source": 3,
+    "fragmentation_depth": 2,
+    "indirection_depth": 2,
+    "noise_level": 0
+  }
+}
+```
+
+**Note**: The only ground truth for scoring is `canonical_answer`. There is no `ground_answer_text` field. Task IDs are derived from the filename (e.g., `example_planning_001.json` → ID: `example_planning_001`).
+
+### Task Categories
+
+- **`planning`**: Meeting scheduling tasks (requires `canonical_answer` with `meeting_slots`)
+- **`document`**: Document generation tasks
+- **`email_reply`**: Email reply tasks
+
+### Metadata Fields
+
+- **`min_required_source`**: Minimum number of distinct sources needed to solve the task (excluding Calendar)
+- **`fragmentation_depth`**: How many separate messages/entries contain key facts (1 = all in one entry, higher = more fragmented)
+- **`indirection_depth`**: Number of "hops" across different sources needed (1 = single source, 2 = two sources, 3+ = multi-hop chains)
+- **`noise_level`**: Reserved for future use (currently always 0)
 
 ## Usage
 
@@ -97,7 +200,7 @@ The simplest way to run evaluation:
 python3 run_evaluation.py
 
 # Evaluate a specific task
-python3 run_evaluation.py example_planning_001
+python3 run_evaluation.py --task-id example_planning_001
 ```
 
 ### Loading Tasks
@@ -110,7 +213,7 @@ from pathlib import Path
 tasks = load_all_tasks()
 
 # Load a specific task
-task = load_task(Path("tasks/task_001.json"))
+task = load_task(Path("tasks/example_planning_001.json"))
 
 # Check task type
 if task.is_planning():
@@ -126,7 +229,7 @@ if task.is_planning():
 python3 run_evaluation.py
 
 # Specific task
-python3 run_evaluation.py example_planning_001
+python3 run_evaluation.py --task-id example_planning_001
 ```
 
 #### Method 2: Python code
@@ -137,17 +240,11 @@ from task_defs import load_task
 from pathlib import Path
 
 # Single task evaluation
-task = load_task(Path('tasks/example_planning_task.json'))
+task = load_task(Path('tasks/example_planning_001.json'))
 result = evaluate_task(task, agent_model='gpt-4o-mini', generate_data=True)
 
 # All tasks evaluation
 results = evaluate_all_tasks(generate_data=True)
-
-# Specific models
-results = evaluate_all_tasks(
-    agent_models=['gpt-4o-mini', 'gpt-4o'],
-    generate_data=True
-)
 ```
 
 #### Method 3: Data generation only
@@ -158,7 +255,7 @@ from task_defs import load_task
 from pathlib import Path
 from config import LOGS_DIR
 
-task = load_task(Path('tasks/example_planning_task.json'))
+task = load_task(Path('tasks/example_planning_001.json'))
 output_dir = LOGS_DIR / task.id / "data"
 source_data = generate_source_data(task, output_dir)
 print(f"Generated sources: {list(source_data.keys())}")
@@ -166,19 +263,18 @@ print(f"Generated sources: {list(source_data.keys())}")
 
 ### Viewing Results
 
-Evaluation results are saved to `logs/{task_id}/agent-{model}_eval.json`:
+Evaluation results are saved to `logs/{task_id}/agent-{model}_{mode}_eval.json`:
 
 ```python
 import json
 from pathlib import Path
 
 # Read results
-result_path = Path('logs/example_planning_001/agent-gpt-4o-mini_eval.json')
+result_path = Path('logs/example_planning_001/agent-gpt-4o-mini_minimal_eval.json')
 with open(result_path, 'r') as f:
     result = json.load(f)
 
 print(f"Answer score: {result['scores']['answer_requirements_satisfaction']}")
-print(f"Source score: {result['scores']['source_grounded_reasoning']}")
 print(f"Final answer: {result['agent_result']['final_answer']}")
 ```
 
@@ -209,7 +305,7 @@ print(f"Final answer: {result['agent_result']['final_answer']}")
 3. **Configure models** in `model_config.json`:
    ```json
    {
-     "agent_models": ["gpt-4o-mini", "gpt-4o"],
+     "agent_models": ["gpt-4o-mini", "gpt-4o", "gpt-5.1"],
      "judge_models": ["gpt-5.1"],
      "data_generation_model": "gpt-5.1"
    }
@@ -218,15 +314,13 @@ print(f"Final answer: {result['agent_result']['final_answer']}")
 ### Notes
 
 - `generate_data=True` generates fresh data each time; set `False` to reuse existing data
-- Data generation uses templates from `generator_config.json`
+- Data generation uses templates and prompts from `prompt_config.json`
 - Missing config entries will raise `ValueError` (no silent fallbacks)
 
 ## Directory Structure
 
 ```
 MPCBench/
-├── archive/
-│   └── mcpbench_v1/          # Archived v1 code (gitignored)
 ├── tasks/                     # Human-authored task definitions (JSON)
 ├── logs/                      # Evaluation logs and run artifacts
 ├── config.py                  # Global configuration
@@ -235,38 +329,11 @@ MPCBench/
 ├── tool_backend.py            # Tool interface to source data
 ├── agent_runner.py            # Single task execution (OpenAI tools)
 ├── evaluate.py                # Evaluation runner
+├── run_evaluation.py          # Main evaluation script
 ├── model_config.json          # Model settings
 ├── prompt_config.json         # LLM prompts and data generation config
 └── README.md                  # This file
 ```
-
-## Data Generation Goals
-
-The data generation system is designed to create diverse, realistic multi-source scenarios for evaluating LLM agents. The goals are:
-
-### 1. Normalization through Diverse Data Combinations
-- **Various source combinations**: Generate data using different combinations of sources (Slack, Jira, Drive, Gmail) to test agents' ability to compose information from multiple sources
-- **Various difficulty combinations**: Create tasks with different combinations of `fragmentation_depth`, `indirection_depth`, and `min_required_source` to test agents under varying complexity levels
-- **Consistent data structure**: All generated data follows a consistent structure, enabling fair comparison across different scenarios
-
-### 2. Difficulty Control Mechanisms
-- **`fragmentation_depth`**: Controls how data is fragmented within a single source
-  - `1`: All information in a single message/entry (complete on its own)
-  - `2`: Information split across 2 messages/entries (each incomplete, must be combined)
-  - `3+`: Information split across 3+ messages/entries (all must be combined to understand)
-- **`indirection_depth`**: Controls how many sources must be combined
-  - `1`: Single source (Calendar only, no linking)
-  - `2`: Two sources linked (e.g., Slack → Jira, where Slack references a Jira issue)
-  - `3+`: Multi-hop chains across 3+ sources (e.g., Slack → Jira → Drive)
-- **`min_required_source`**: Minimum number of distinct sources needed (excluding Calendar)
-  - Determines how many additional sources (Slack, Jira, Drive, Gmail) must be used
-  - Each source removes specific distractor slots, making canonical slots unique
-
-### 3. Rigor in Ground Truth-Source Alignment
-- **Canonical slot uniqueness**: Generated constraints ensure that canonical slots are the only valid answers
-- **Distractor elimination**: Each source removes specific distractor slots while preserving canonical slots
-- **Constraint-only sources**: Jira, Drive, and Gmail never explicitly state the canonical time - they only provide constraints (ranges or exclusions) that eliminate distractors
-- **Natural constraint expression**: Constraints are expressed naturally (e.g., "afternoons after 14:00" in Slack, "conflict at 13:00" in Jira) rather than as explicit rules
 
 ## Planning Pipeline
 
@@ -280,7 +347,8 @@ The end-to-end pipeline for planning tasks:
      - LLM generates natural, realistic content that meets fragmentation and indirection requirements
      - Generated content is validated by another LLM call to ensure it meets criteria (incompleteness, constraint application, linked source references)
      - Falls back to template-based generation if LLM validation fails after retries
-   - **Calendar generation**: Remains logic-based (structured data with free/busy slots)
+   - **Calendar generation**: Logic-based generation (structured data with free/busy slots)
+   - **Distractor generation**: Distractors are generated within the same date range as canonical slots to ensure `min_required_source` and `indirection_depth` work correctly
    - Apply constraint templates based on `indirection_depth` and `min_required_source`:
      - **depth=1**: Calendar only (T_CAL_UNIQUE)
      - **depth=2**: Calendar + Slack/Jira/Drive/Gmail constraints (unidirectional linking)
@@ -321,16 +389,6 @@ All data-specific content (names, emails, templates, timestamps) and LLM prompts
 
 No Python code contains hard-coded names, emails, project names, timestamps, or prompt text.
 
-## Design Principles
-
-1. **Task-First**: Tasks define requirements; source data is generated to support them
-2. **No Personas**: Personalization emerges from source content, not pre-defined personas
-3. **No Hard-Coded Data**: All names, emails, projects, labels come from `prompt_config.json` generator section or are derived from `task_description`/`canonical_answer`. Missing config entries raise `ValueError` (no silent fallbacks)
-4. **Constraint Templates**: Reusable templates create realistic multi-source scenarios. Jira/Drive/Gmail provide constraints only (never explicitly state canonical time)
-5. **Canonical Answer Only**: Scoring uses only `canonical_answer` (no `ground_answer_text`)
-6. **Dynamic Participants**: Participants are extracted from `task_description` or generated from config, never hard-coded
-7. **Multi-Source Reasoning**: Agents must combine calendar availability with constraints from Slack/Jira/Drive/Gmail to find the unique canonical slot
-
 ## Requirements
 
 - Python 3.8+
@@ -342,8 +400,11 @@ No Python code contains hard-coded names, emails, project names, timestamps, or 
 - [ ] Support team-based tasks (e.g., "Find a meeting time for our team")
 - [ ] Currently only planning tasks are supported. When adding email/document evaluation, add corresponding functions and ensure they don't conflict
 - [ ] Add noise - generate distractor data unrelated to constraints
+- [ ] Modify `source_descriptions` in `prompt_config.json` to generate more realistic data for each source type (Slack, Jira, Drive, Gmail)
+
+### API and Data Consistency
+- [ ] Verify API-data consistency and remove unnecessary APIs that don't align with generated data structure
 
 ### Evaluation
 - [ ] Consider rationale in scoring system
 - [ ] Adjust penalty ratio for extra slots
-

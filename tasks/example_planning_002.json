@@ -1,8 +1,7 @@
 {
-  "id": "example_planning_001",
   "category": "planning",
   "current_date": "2025-11-24",
-  "task_description": "Find a meeting time that works for Alice, Bob, and Carol next week.",
+  "task_description": "Find a meeting time that works for Alice, Bob, and Carol next week. Please provide all possible time slots that work for all three participants.",
   "canonical_answer": {
     "meeting_slots": [
       {

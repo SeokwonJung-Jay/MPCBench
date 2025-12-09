@@ -2,20 +2,20 @@
     "agent": {
         "system_message": {
             "minimal": "You are a helpful workplace assistant that has access to multiple data sources (Slack, Gmail, Calendar, Jira, Drive) through function calling tools. You MUST use these tools to gather information before providing answers.",
-            "detailed": "You are a helpful workplace assistant that has access to multiple data sources (Slack, Gmail, Calendar, Jira, Drive) through function calling tools. You MUST use these tools to gather information before providing answers. The tools are available and ready to use - call them when you need to check calendars, query Slack messages, check Jira issues, search Drive files, or read Gmail threads. Do not claim you don't have access - the tools are provided to you and you should use them. When solving tasks, consider information from multiple sources and make decisions based on a comprehensive view of all available data."
+            "detailed": "You are a helpful workplace assistant that has access to multiple data sources (Slack, Gmail, Calendar, Jira, Drive) through function calling tools. You MUST use these tools to gather information before providing answers. The clues needed to solve problems are hidden within these data sources - you need to explore them to find the necessary information. Review the descriptions of each available API and call the appropriate APIs to gather the information needed to solve the task. When solving tasks, consider information from multiple sources and make decisions based on a comprehensive view of all available data."
         },
         "user_message_instructions": {
             "minimal": {
                 "tool_list": "You have access to the following tools: {tool_names}.",
                 "tool_usage": "IMPORTANT: You MUST use the available tools to gather information before providing your final answer. Do not provide an answer without first calling the relevant tools to check calendars and other data sources.",
-                "response_format": "After you have gathered all necessary information using the tools, provide your final answer in the following format:\n\nFinal Answer:\n[Your final answer here]\n\nRationale:\n[Your explanation here, including:\n- Which tools you used and why\n- What information you found from each source\n- How you applied any constraints or filters\n- Why you selected the final answer]"
+                "response_format": "After you have gathered all necessary information using the tools, provide your final answer in the following format:\n\nFinal Answer:\n[Your final answer here]\n\nIMPORTANT: When specifying dates and times in your answer, use the following formats:\n- Dates: YYYY-MM-DD format (e.g., 2025-12-02)\n- Times: HH:MM-HH:MM format (e.g., 14:00-14:45)\n\nRationale:\n[Your explanation here, including:\n- Which tools you used and why\n- What information you found from each source\n- How you applied any constraints or filters\n- Why you selected the final answer]"
             },
             "detailed": {
                 "tool_list": "You have access to the following tools: {tool_names}.",
                 "tool_usage": "IMPORTANT: You MUST use the available tools to gather information before providing your final answer. Do not provide an answer without first calling the relevant tools to check calendars and other data sources.",
                 "date_range_hint": "If you're unsure about the exact date range, you can call calendar_query_freebusy without specifying start_date and end_date to search all available dates. This is often more reliable than guessing dates.",
                 "calendar_warning": "The calendar data may not include all scheduling constraints. Other sources (Jira, Drive, Slack, Gmail) may contain additional information about time conflicts or constraints that are not reflected in the calendar. Always check these other sources to ensure a time slot is truly available and not excluded by other constraints.",
-                "response_format": "After you have gathered all necessary information using the tools, provide your final answer in the following format:\n\nFinal Answer:\n[Your final answer here]\n\nRationale:\n[Your explanation here, including:\n- Which tools you used and why\n- What information you found from each source\n- How you applied any constraints or filters\n- Why you selected the final answer]"
+                "response_format": "After you have gathered all necessary information using the tools, provide your final answer in the following format:\n\nFinal Answer:\n[Your final answer here]\n\nIMPORTANT: When specifying dates and times in your answer, use the following formats:\n- Dates: YYYY-MM-DD format (e.g., 2025-12-02)\n- Times: HH:MM-HH:MM format (e.g., 14:00-14:45)\n\nRationale:\n[Your explanation here, including:\n- Which tools you used and why\n- What information you found from each source\n- How you applied any constraints or filters\n- Why you selected the final answer]"
             }
         }
     },
@@ -27,15 +27,15 @@
     "user_prompt_template": {
       "instructions": "Generate realistic, natural content that:",
       "requirements": [
-        "Each piece is incomplete on its own (fragmentation_depth >= 2)",
+        "Each piece is incomplete on its own (if fragmentation_depth >= 2)",
         "When combined, the distractor slots are excluded but canonical slots remain",
         "References the linked source appropriately (if indirection_depth >= 2)",
-        "Uses natural language (not explicit rules)"
+        "The content is realistic and natural depending on the source"
       ],
       "format_instructions": {
         "slack": "Return exactly {fragmentation_depth} messages. Format:\n- JSON array: [\"Message 1\", \"Message 2\", ...]\n- OR newline-separated: Message 1\\nMessage 2\\n...\nEach message should be incomplete on its own but together exclude the distractor slots.",
-        "jira": "Return exactly {fragmentation_depth} issues. Format:\n- JSON array: [{\"summary\": \"...\", \"description\": \"...\"}, ...]\n- OR newline-separated: Summary 1\\nSummary 2\\n...\nEach issue should be incomplete on its own but together exclude the distractor slots.",
-        "drive": "Return exactly {fragmentation_depth} file contents. Format:\n- JSON array: [{\"name\": \"...\", \"text\": \"...\"}, ...]\n- OR newline-separated: Content 1\\nContent 2\\n...\nEach file content should be incomplete on its own but together exclude the distractor slots.",
+        "jira": "Return exactly {fragmentation_depth} issues. Format:\n- JSON array: [{\"description\": \"...\"}, ...]\n- OR newline-separated: Description 1\\nDescription 2\\n...\nEach description must be 10 sentences or less and should be incomplete on its own but together exclude the distractor slots.\n\nCRITICAL: Each issue description must be INCOMPLETE and feel like a brief note or comment, not a complete ticket.\n- Issue 1: Should contain only PARTIAL information (e.g., vague references, missing context, unclear details)\n- Issue 2: Should contain COMPLEMENTARY information needed to complete Issue 1\n- Together they should exclude distractor slots, but each alone should be insufficient\n- DO NOT create structured tickets with sections like 'Goal', 'Context', 'Tasks', 'Acceptance criteria'\n- Keep descriptions short, conversational, and realistic like actual Jira comments or quick notes\n\nExample of INCOMPLETE issues (GOOD - realistic Jira style):\nIssue 1: {\"description\": \"Checking availability for next week. There's a potential conflict on Tuesday afternoon. Need to confirm with the team.\"}\nIssue 2: {\"description\": \"The 2pm slot on Dec 2nd is blocked. See channel_000 in Slack for details. We should skip that time.\"}\n\nAnother GOOD example:\nIssue 1: {\"description\": \"Alice mentioned she can't do early morning next week. Need to find alternative times. Will check with Bob and Carol.\"}\nIssue 2: {\"description\": \"The 13:00-13:45 window on Wednesday is out. There's a conflict with another meeting. Tuesday 14:00-14:45 might work instead.\"}\n\nExample of COMPLETE issues (BAD - DO NOT DO THIS):\nIssue 1: {\"description\": \"Goal: Find meeting time. Context: We need to schedule... Tasks: 1. Check calendars 2. Confirm... Acceptance criteria: ...\"}\nIssue 2: {\"description\": \"Objective: Finalize meeting. Inputs: From previous issue... Tasks: 1. Review options 2. Send invite... Deliverables: ...\"}",
+        "drive": "Return exactly {fragmentation_depth} file contents. Format:\n- JSON array: [{\"name\": \"...\", \"text\": \"...\"}, ...]\n- OR newline-separated: Content 1\\nContent 2\\n...\nEach file must be at least 30 sentences long.\nCRITICAL:\n- Only 1-2 sentences should be about scheduling/meeting times\n- The remaining 28+ sentences should be realistic workplace content related to the document title\n- Document titles should suggest the main topic (e.g., 'Project Planning Notes', 'Team Meeting Summary', 'Q4 Roadmap Discussion')\n- The scheduling information should be naturally embedded within the larger document context\nEach file content should be incomplete on its own but together exclude the distractor slots.",
         "gmail": "Return exactly {fragmentation_depth} email messages. Format:\n- JSON array: [{\"text\": \"...\"}, ...]\n- OR newline-separated: Message 1\\nMessage 2\\n...\nEach message should be incomplete on its own but together exclude the distractor slots."
       }
     },
@@ -43,8 +43,8 @@
       "calendar": "Generate realistic calendar data for the given task.",
       "slack": "Generate realistic Slack messages for the given task.",
       "gmail": "Generate realistic Gmail threads for the given task.",
-      "jira": "Generate realistic Jira issues for the given task.",
-      "drive": "Generate realistic Drive files for the given task."
+      "jira": "Generate realistic Jira issues for the given task. Each issue should be a brief, incomplete note or comment (10 sentences or less) that references scheduling constraints. Think of these as quick notes or partial updates rather than complete, well-structured tickets. They should feel like someone quickly added a comment or created a minimal issue without full documentation.",
+      "drive": "Generate realistic Drive document files. Each file must be at least 30 sentences long. The scheduling/meeting information should only occupy 1-2 sentences of the document. The majority of the content (28+ sentences) should be realistic workplace content related to the document title/name, such as project notes, meeting summaries, planning documents, or team updates."
     },
     "validation": {
       "system_message": "You are a validator that checks if generated data meets requirements.",
@@ -65,56 +65,16 @@
       "default_channel": "general",
       "base_user_names": ["alice", "bob", "carol", "dave", "eve"],
       "channel_names": ["general", "team", "random"],
-      "channel_descriptions": ["General discussion", "Team updates", "Random chat"],
-      "time_filter_templates": [
-        "Morning meetings are not possible next week; let's aim for after {time}.",
-        "I can't do mornings; afternoons after {time} are better.",
-        "Let's schedule in the afternoon, preferably after {time}.",
-        "Early morning slots don't work for me; {time} or later would be ideal."
-      ],
-      "weekday_filter_templates": [
-        "I'm unavailable on {days}; let's schedule midweek.",
-        "I can't do {days}; {allowed_days} works best for me.",
-        "Let's avoid {days}; {allowed_days} would be ideal.",
-        "Monday and Tuesday are blocked; {allowed_days} is better."
-      ],
-      "doc_reference_templates": [
-        "Let's use the time in the '{doc_title}' we wrote last week.",
-        "Check the '{doc_title}' document for the scheduled time.",
-        "The '{doc_title}' has the meeting details we agreed on.",
-        "Refer to '{doc_title}' for the meeting schedule."
-      ]
+      "channel_descriptions": ["General discussion", "Team updates", "Random chat"]
     },
     "jira": {
       "project_keys": ["API", "DOC", "PROJ", "TEAM"],
       "project_names": ["API Project", "Documentation Project", "Project Management", "Team Collaboration"],
-      "project_descriptions": ["API development project", "Documentation and guides", "Project tracking and planning", "Team coordination"],
-      "conflict_templates": [
-        "Team Sync scheduled for {date} {slot}",
-        "Sprint planning on {date} at {slot}",
-        "All-hands meeting: {date} {slot}",
-        "Deployment window: {date} {slot}",
-        "Review meeting: {date} {slot}"
-      ]
+      "project_descriptions": ["API development project", "Documentation and guides", "Project tracking and planning", "Team coordination"]
     },
     "drive": {
       "folder_names": ["Documents", "Projects", "Team"],
-      "folder_descriptions": ["General documents", "Project files", "Team resources"],
-      "doc_title_templates": [
-        "API Design Doc",
-        "Project Planning",
-        "Meeting Notes",
-        "Team Sync Agenda",
-        "Sprint Planning Doc"
-      ],
-      "doc_time_negative_templates": [
-        "The previous plan was to meet on {date} {slot}, but that time no longer works.",
-        "We had scheduled {date} {slot}, but that's been canceled.",
-        "The {date} {slot} slot is no longer available.",
-        "Original plan for {date} {slot} has been moved.",
-        "We can't use {date} {slot} anymore; that slot is blocked.",
-        "The meeting originally planned for {date} {slot} has been rescheduled."
-      ]
+      "folder_descriptions": ["General documents", "Project files", "Team resources"]
     },
     "calendar": {
       "timestamp_patterns": [
@@ -126,21 +86,7 @@
     },
     "gmail": {
       "from_candidates": ["alice@example.com", "bob@example.com", "carol@example.com"],
-      "to_candidates": ["team@example.com", "all@example.com"],
-      "subject_templates": [
-        "Schedule update",
-        "Meeting time change",
-        "Availability update",
-        "Time slot conflict"
-      ],
-      "cancellation_templates": [
-        "We can't do {date} {slot} anymore.",
-        "{date} {slot} is no longer available.",
-        "I need to cancel the {date} {slot} slot.",
-        "The {date} {slot} time slot has been canceled.",
-        "We can't use {date} {slot}; please pick another time.",
-        "{date} {slot} won't work for me anymore."
-      ]
+      "to_candidates": ["team@example.com", "all@example.com"]
     }
   },
   "tool_descriptions": {

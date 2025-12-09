@@ -11,18 +11,23 @@ from config import TASKS_DIR
 @dataclass
 class Task:
     """Represents a single task instance."""
-    id: str
+    task_path: Path
     category: str
     task_description: str
     canonical_answer: Optional[Dict[str, Any]]
     metadata: Dict[str, int]
     current_date: Optional[str] = None
 
+    @property
+    def id(self) -> str:
+        """Get task ID from file name (without extension)."""
+        return self.task_path.stem
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Task":
+    def from_dict(cls, data: Dict[str, Any], task_path: Path) -> "Task":
         """Create a Task from a dictionary."""
         return cls(
-            id=data["id"],
+            task_path=task_path,
             category=data["category"],
             task_description=data["task_description"],
             canonical_answer=data.get("canonical_answer"),
@@ -33,7 +38,6 @@ class Task:
     def to_dict(self) -> Dict[str, Any]:
         """Convert Task to dictionary."""
         result = {
-            "id": self.id,
             "category": self.category,
             "task_description": self.task_description,
             "canonical_answer": self.canonical_answer,
@@ -60,7 +64,7 @@ def load_task(task_path: Path) -> Task:
     """Load a single task from a JSON file."""
     with open(task_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    return Task.from_dict(data)
+    return Task.from_dict(data, task_path)
 
 
 def load_all_tasks() -> List[Task]:
@@ -80,8 +84,6 @@ def validate_task(task: Task) -> List[str]:
     errors = []
 
     # Required fields
-    if not task.id:
-        errors.append("Task id is required")
     if not task.category:
         errors.append("Task category is required")
     if not task.task_description:

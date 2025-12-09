@@ -131,8 +131,7 @@ def generate_with_llm(
             {"role": "system", "content": system_message},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.7,
-        max_tokens=500
+        temperature=0.7
     )
     
     return response.choices[0].message.content.strip()
@@ -197,8 +196,7 @@ Requirements:
             {"role": "system", "content": validation_system_message},
             {"role": "user", "content": validation_prompt}
         ],
-        temperature=0.0,
-        max_tokens=200
+        temperature=0.0
     )
     
     result = response.choices[0].message.content.strip()
@@ -383,6 +381,7 @@ def generate_calendar(
     fragmentation_depth: int,
     generator_config: Dict[str, Any],
     min_required_source: int,
+    indirection_depth: int,
     current_date: Optional[str] = None
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, str]]]:
     """
@@ -444,11 +443,22 @@ def generate_calendar(
             })
     
     # Step 2: Determine number of distractor slots needed
-    # Need enough distractors for min_required_source
-    num_distractors = max(fragmentation_depth + 2, min_required_source)
+    # Based on fragmentation_depth, indirection_depth, and min_required_source
+    num_distractors = max(fragmentation_depth + indirection_depth, min_required_source)
     
-    # Step 3: Generate distractor slots randomly
-    # Date range: current_date ± 7 days
+    # Step 3: Determine date range for distractors based on canonical slots
+    # Distractors should be in the same date range as canonical slots
+    # to ensure min_required_source and indirection_depth work correctly
+    canonical_dates = [datetime.strptime(slot["date"], "%Y-%m-%d") for slot in all_canonical_slots]
+    min_canonical_date = min(canonical_dates)
+    max_canonical_date = max(canonical_dates)
+    
+    # Extend range by 1 day on each side to allow some flexibility
+    distractor_min_date = min_canonical_date - timedelta(days=1)
+    distractor_max_date = max_canonical_date + timedelta(days=1)
+    
+    # Step 4: Generate distractor slots randomly
+    # Date range: same range as canonical slots (with 1 day buffer)
     # Time range: 9:00-17:00 (45-minute slots)
     current_dt = datetime.strptime(current_date, "%Y-%m-%d")
     
@@ -462,9 +472,14 @@ def generate_calendar(
     while len(distractor_slots) < num_distractors and attempts < max_attempts:
         attempts += 1
         
-        # Random date: current_date ± 7 days
-        day_offset = random.randint(-7, 7)
-        distractor_date_dt = current_dt + timedelta(days=day_offset)
+        # Random date: within canonical slot date range (with 1 day buffer)
+        days_range = (distractor_max_date - distractor_min_date).days
+        if days_range > 0:
+            day_offset = random.randint(0, days_range)
+            distractor_date_dt = distractor_min_date + timedelta(days=day_offset)
+        else:
+            # If all canonical slots are on the same day, use that day ± 1 day
+            distractor_date_dt = min_canonical_date + timedelta(days=random.randint(-1, 1))
         distractor_date = distractor_date_dt.strftime("%Y-%m-%d")
         
         # Random time: 9:00-17:00 (45-minute slots)
@@ -484,7 +499,7 @@ def generate_calendar(
                 "slot": distractor_slot
             })
     
-    # Step 4: Add distractor slots to candidate_slots and events
+    # Step 5: Add distractor slots to candidate_slots and events
     for distractor_slot in distractor_slots:
         candidate_slots.append(distractor_slot)
         for participant in participants:
@@ -646,6 +661,10 @@ def generate_slack(
                 }
             )
             
+            # Log generated text for debugging
+            print(f"\n[DEBUG] Slack generation attempt {retry + 1}/{max_retries}")
+            print(f"[DEBUG] Generated text:\n{generated_text}\n")
+            
             # Validate generated data
             is_valid, error_msg = validate_generated_data(
                 generated_text=generated_text,
@@ -724,46 +743,10 @@ def generate_slack(
                 
                 break  # Success, exit retry loop
             else:
+                print(f"[DEBUG] Validation failed: {error_msg}")
                 if retry == max_retries - 1:
-                    # Last retry failed, use fallback template-based generation
-                    # This ensures we always generate something
-                    participant_name = participants[0]["name"] if participants else "Bob"
-                    distractor_hour = int(assigned_distractor["slot"].split("-")[0].split(":")[0])
-                    min_canonical_hour = 14
-                    for slot in all_canonical_slots:
-                        if "-" in slot["slot"]:
-                            hour = int(slot["slot"].split("-")[0].split(":")[0])
-                            min_canonical_hour = min(min_canonical_hour, hour)
-                    
-                    threshold_hour = distractor_hour + 1 if distractor_hour < min_canonical_hour else min_canonical_hour
-                    
-                    for msg_idx in range(fragmentation_depth):
-                        global_msg_idx = distractor_idx * fragmentation_depth + msg_idx
-                        timestamp = timestamp_patterns[global_msg_idx % len(timestamp_patterns)]
-                        
-                        if msg_idx == 0:
-                            message_text = f"{third_party_name} mentioned that {participant_name.lower()} might have availability constraints."
-                        elif msg_idx == 1:
-                            time_str = f"{threshold_hour:02d}:00"
-                            message_text = f"They told me only after {time_str} works."
-                        else:
-                            message_text = f"{third_party_name} asked {participant_name.lower()} and they said only after {threshold_hour:02d}:00 is possible."
-                        
-                        if indirection_depth >= 2 and linked_source and linked_source_id and msg_idx == fragmentation_depth - 1:
-                            if linked_source == "jira":
-                                message_text += f" The Jira issue {linked_source_id} has unavailable times."
-                            elif linked_source == "drive":
-                                message_text += f" The document '{linked_source_id}' has unavailable times."
-                            elif linked_source == "gmail":
-                                message_text += f" The Gmail thread {linked_source_id} has unavailable times."
-                        
-                        messages.append({
-                            "channel_id": default_channel_id,
-                            "channel": default_channel,
-                            "user": get_user_name(global_msg_idx % len(participants) if participants else global_msg_idx),
-                            "text": message_text,
-                            "timestamp": timestamp
-                        })
+                    # Last retry failed, raise error with generated text
+                    raise ValueError(f"Failed to generate valid Slack messages after {max_retries} attempts. Last error: {error_msg}\n\nGenerated text:\n{generated_text}")
     
     return channels, messages
 
@@ -853,6 +836,10 @@ def generate_jira(
                     }
                 )
                 
+                # Log generated text for debugging
+                print(f"\n[DEBUG] Jira generation attempt {retry + 1}/{max_retries}")
+                print(f"[DEBUG] Generated text:\n{generated_text}\n")
+                
                 # Validate generated data
                 is_valid, error_msg = validate_generated_data(
                     generated_text=generated_text,
@@ -873,11 +860,15 @@ def generate_jira(
                             # LLM returned list of issues
                             for issue_data in parsed:
                                 if isinstance(issue_data, dict):
-                                    summary = issue_data.get("summary", "")
-                                    description = issue_data.get("description", summary)
+                                    description = issue_data.get("description", "")
+                                    # Use first sentence or first 50 chars as summary if description exists
+                                    if description:
+                                        summary = description.split('.')[0][:50] if '.' in description else description[:50]
+                                    else:
+                                        continue
                                 elif isinstance(issue_data, str):
-                                    summary = issue_data
                                     description = issue_data
+                                    summary = description.split('.')[0][:50] if '.' in description else description[:50]
                                 else:
                                     continue
                                 
@@ -892,11 +883,13 @@ def generate_jira(
                         else:
                             # Not a list, treat as single issue
                             global_issue_idx = distractor_idx * fragmentation_depth
+                            description = generated_text
+                            summary = description.split('.')[0][:50] if '.' in description else description[:50]
                             issues.append({
                                 "issue_key": f"{project_keys[0]}-{120 + global_issue_idx}",
                                 "project_key": project_keys[0],
-                                "summary": generated_text,
-                                "description": generated_text,
+                                "summary": summary,
+                                "description": description,
                                 "status": "To Do"
                             })
                     except json.JSONDecodeError:
@@ -906,11 +899,13 @@ def generate_jira(
                             line = line.strip()
                             if line:
                                 global_issue_idx = distractor_idx * fragmentation_depth + len(issues)
+                                description = line
+                                summary = description.split('.')[0][:50] if '.' in description else description[:50]
                                 issues.append({
                                     "issue_key": f"{project_keys[0]}-{120 + global_issue_idx}",
                                     "project_key": project_keys[0],
-                                    "summary": line,
-                                    "description": line,
+                                    "summary": summary,
+                                    "description": description,
                                     "status": "To Do"
                                 })
                     
@@ -918,11 +913,13 @@ def generate_jira(
                     issues_added = len([i for i in issues if i.get("_distractor_idx") == distractor_idx])
                     while issues_added < fragmentation_depth:
                         global_issue_idx = distractor_idx * fragmentation_depth + len(issues)
+                        description = generated_text.split('\n')[0] if '\n' in generated_text else generated_text
+                        summary = description.split('.')[0][:50] if '.' in description else description[:50]
                         issues.append({
                             "issue_key": f"{project_keys[0]}-{120 + global_issue_idx}",
                             "project_key": project_keys[0],
-                            "summary": generated_text.split('\n')[0] if '\n' in generated_text else generated_text,
-                            "description": generated_text.split('\n')[0] if '\n' in generated_text else generated_text,
+                            "summary": summary,
+                            "description": description,
                             "status": "To Do",
                             "_distractor_idx": distractor_idx
                         })
@@ -930,50 +927,10 @@ def generate_jira(
                     
                     break  # Success, exit retry loop
                 else:
+                    print(f"[DEBUG] Validation failed: {error_msg}")
                     if retry == max_retries - 1:
-                        # Last retry failed, use fallback template-based generation
-                        conflict_templates = jira_config.get("conflict_templates", [])
-                        if not conflict_templates:
-                            raise ValueError("Missing generator_config entry: jira.conflict_templates")
-                        
-                        for issue_idx in range(fragmentation_depth):
-                            global_issue_idx = distractor_idx * fragmentation_depth + issue_idx
-                            
-                            if issue_idx == 0:
-                                summary = f"Need to check {third_party_name}'s schedule"
-                                description = summary
-                            elif issue_idx == 1:
-                                template = conflict_templates[issue_idx % len(conflict_templates)]
-                                summary = template.format(
-                                    date=assigned_distractor["date"],
-                                    slot=assigned_distractor["slot"]
-                                )
-                                description = summary
-                            else:
-                                template = conflict_templates[issue_idx % len(conflict_templates)]
-                                summary = template.format(
-                                    date=assigned_distractor["date"],
-                                    slot=assigned_distractor["slot"]
-                                )
-                                description = f"Related to {third_party_name}'s schedule: {summary}"
-                            
-                            if indirection_depth >= 2 and linked_source and linked_source_id and issue_idx == fragmentation_depth - 1:
-                                if linked_source == "slack":
-                                    description += f" Time mentioned in Slack channel {linked_source_id}."
-                                elif linked_source == "drive":
-                                    description += f" Time mentioned in Drive document '{linked_source_id}'."
-                                elif linked_source == "gmail":
-                                    description += f" Time mentioned in Gmail thread {linked_source_id}."
-                                elif linked_source == "jira":
-                                    description += f" Related to Jira issue {linked_source_id}."
-                            
-                            issues.append({
-                                "issue_key": f"{project_keys[0]}-{120 + global_issue_idx}",
-                                "project_key": project_keys[0],
-                                "summary": summary,
-                                "description": description,
-                                "status": "To Do"
-                            })
+                        # Last retry failed, raise error with generated text
+                        raise ValueError(f"Failed to generate valid Jira issues after {max_retries} attempts. Last error: {error_msg}\n\nGenerated text:\n{generated_text}")
     
     return projects, issues
 
@@ -1028,15 +985,13 @@ def generate_drive(
     if not assigned_distractors:
         return folders, files
     
+    # Get task description from generator_config (passed from generate_planning_source_data)
+    task_description = generator_config.get("_task_description", "Find a meeting time")
+    
+    # Get participants from generator_config (if available)
+    participants = generator_config.get("_participants", [])
+    
     if indirection_depth >= 2:
-        doc_titles = drive_config.get("doc_title_templates", [])
-        if not doc_titles:
-            raise ValueError("Missing generator_config entry: drive.doc_title_templates")
-        
-        templates = drive_config.get("doc_time_negative_templates", [])
-        if not templates:
-            raise ValueError("Missing generator_config entry: drive.doc_time_negative_templates")
-        
         # Get third-party name for hints
         fallback_names = generator_config.get("fallback_names", ["Alice", "Bob", "Carol", "Dave", "Eve"])
         third_party_name = fallback_names[0] if fallback_names else "Amy"
@@ -1067,10 +1022,13 @@ def generate_drive(
                     linked_source=linked_source,
                     linked_source_id=linked_source_id,
                     additional_context={
-                        "third_party_name": third_party_name,
-                        "doc_titles": doc_titles
+                        "third_party_name": third_party_name
                     }
                 )
+                
+                # Log generated text for debugging
+                print(f"\n[DEBUG] Drive generation attempt {retry + 1}/{max_retries}")
+                print(f"[DEBUG] Generated text:\n{generated_text}\n")
                 
                 # Validate generated data
                 is_valid, error_msg = validate_generated_data(
@@ -1092,7 +1050,7 @@ def generate_drive(
                             # LLM returned list of file contents
                             for file_idx, file_content in enumerate(parsed):
                                 global_file_idx = distractor_idx * fragmentation_depth + file_idx
-                                doc_title = doc_titles[global_file_idx % len(doc_titles)]
+                                doc_title = f"Document {global_file_idx + 1}"
                                 
                                 if isinstance(file_content, dict):
                                     text = file_content.get("text", file_content.get("content", ""))
@@ -1112,7 +1070,7 @@ def generate_drive(
                         else:
                             # Not a list, treat as single file
                             global_file_idx = distractor_idx * fragmentation_depth
-                            doc_title = doc_titles[global_file_idx % len(doc_titles)]
+                            doc_title = f"Document {global_file_idx + 1}"
                             files.append({
                                 "file_id": f"file_{global_file_idx:03d}",
                                 "folder_id": default_folder_id,
@@ -1126,7 +1084,7 @@ def generate_drive(
                             line = line.strip()
                             if line:
                                 global_file_idx = distractor_idx * fragmentation_depth + file_idx
-                                doc_title = doc_titles[global_file_idx % len(doc_titles)]
+                                doc_title = f"Document {global_file_idx + 1}"
                                 files.append({
                                     "file_id": f"file_{global_file_idx:03d}",
                                     "folder_id": default_folder_id,
@@ -1138,7 +1096,7 @@ def generate_drive(
                     files_added = len([f for f in files if f.get("_distractor_idx") == distractor_idx])
                     while files_added < fragmentation_depth:
                         global_file_idx = distractor_idx * fragmentation_depth + len(files)
-                        doc_title = doc_titles[global_file_idx % len(doc_titles)]
+                        doc_title = f"Document {global_file_idx + 1}"
                         files.append({
                             "file_id": f"file_{global_file_idx:03d}",
                             "folder_id": default_folder_id,
@@ -1150,47 +1108,10 @@ def generate_drive(
                     
                     break  # Success, exit retry loop
                 else:
+                    print(f"[DEBUG] Validation failed: {error_msg}")
                     if retry == max_retries - 1:
-                        # Last retry failed, use fallback template-based generation
-                        if not templates:
-                            raise ValueError("Missing generator_config entry: drive.doc_time_negative_templates")
-                        
-                        for file_idx in range(fragmentation_depth):
-                            global_file_idx = distractor_idx * fragmentation_depth + file_idx
-                            doc_title = doc_titles[global_file_idx % len(doc_titles)]
-                            
-                            if file_idx == 0:
-                                text = f"There was a discussion about the previous plan, {third_party_name} mentioned it."
-                            elif file_idx == 1:
-                                template = templates[file_idx % len(templates)]
-                                text = template.format(
-                                    date=assigned_distractor["date"],
-                                    slot=assigned_distractor["slot"]
-                                )
-                            else:
-                                template = templates[file_idx % len(templates)]
-                                text = template.format(
-                                    date=assigned_distractor["date"],
-                                    slot=assigned_distractor["slot"]
-                                )
-                                text = f"{third_party_name} mentioned: {text}"
-                            
-                            if indirection_depth >= 2 and linked_source and linked_source_id and file_idx == fragmentation_depth - 1:
-                                if linked_source == "slack":
-                                    text += f" Time mentioned in Slack channel {linked_source_id}."
-                                elif linked_source == "jira":
-                                    text += f" Time mentioned in Jira issue {linked_source_id}."
-                                elif linked_source == "gmail":
-                                    text += f" Time mentioned in Gmail thread {linked_source_id}."
-                                elif linked_source == "drive":
-                                    text += f" Related to Drive document '{linked_source_id}'."
-                            
-                            files.append({
-                                "file_id": f"file_{global_file_idx:03d}",
-                                "folder_id": default_folder_id,
-                                "name": doc_title,
-                                "text": text
-                            })
+                        # Last retry failed, raise error with generated text
+                        raise ValueError(f"Failed to generate valid Drive files after {max_retries} attempts. Last error: {error_msg}\n\nGenerated text:\n{generated_text}")
     
     return folders, files
 
@@ -1218,200 +1139,109 @@ def generate_gmail(
         excluded_slots = set()
     threads = []
     
-    if indirection_depth >= 3:
-        gmail_config = generator_config.get("gmail", {})
-        subject_templates = gmail_config.get("subject_templates", [])
-        if not subject_templates:
-            raise ValueError("Missing generator_config entry: gmail.subject_templates")
-        
-        from_candidates = gmail_config.get("from_candidates", [])
-        to_candidates = gmail_config.get("to_candidates", [])
-        calendar_config = generator_config.get("calendar", {})
-        timestamp_patterns = calendar_config.get("timestamp_patterns", [])
-        if not timestamp_patterns:
-            raise ValueError("Missing generator_config entry: calendar.timestamp_patterns")
-        
-        cancellation_templates = gmail_config.get("cancellation_templates", [])
-        if not cancellation_templates:
-            raise ValueError("Missing generator_config entry: gmail.cancellation_templates")
-        
-        # Get from/to addresses (once, outside loop)
-        if participants and len(participants) > 0:
-            from_addr = participants[0]["email"]
-            to_addrs = [p["email"] for p in participants[1:2]] if len(participants) > 1 else []
-        elif from_candidates:
-            from_addr = from_candidates[0]
-            to_addrs = to_candidates[:2] if to_candidates else []
+    # Gmail generation works for all indirection_depth values (1, 2, 3+)
+    gmail_config = generator_config.get("gmail", {})
+    from_candidates = gmail_config.get("from_candidates", [])
+    to_candidates = gmail_config.get("to_candidates", [])
+    calendar_config = generator_config.get("calendar", {})
+    timestamp_patterns = calendar_config.get("timestamp_patterns", [])
+    if not timestamp_patterns:
+        raise ValueError("Missing generator_config entry: calendar.timestamp_patterns")
+    
+    # Get from/to addresses (once, outside loop)
+    if participants and len(participants) > 0:
+        from_addr = participants[0]["email"]
+        to_addrs = [p["email"] for p in participants[1:2]] if len(participants) > 1 else []
+    elif from_candidates:
+        from_addr = from_candidates[0]
+        to_addrs = to_candidates[:2] if to_candidates else []
+    else:
+        raise ValueError("Missing generator_config entry: gmail.from_candidates (required when no participants available)")
+    
+    if not to_addrs:
+        if to_candidates:
+            to_addrs = to_candidates[:2]
         else:
-            raise ValueError("Missing generator_config entry: gmail.from_candidates (required when no participants available)")
-        
-        if not to_addrs:
-            if to_candidates:
-                to_addrs = to_candidates[:2]
-            else:
-                raise ValueError("Missing generator_config entry: gmail.to_candidates (required when no participants available)")
-        
-        # Get task description from generator_config
-        task_description = generator_config.get("_task_description", "Find a meeting time")
-        
-        # Get third-party name for hints
-        fallback_names = generator_config.get("fallback_names", ["Alice", "Bob", "Carol", "Dave", "Eve"])
-        third_party_name = fallback_names[0] if fallback_names else "Amy"
-        
-        # Option C: fragmentation_depth * len(assigned_distractors) messages
-        # Each distractor gets fragmentation_depth incomplete messages
-        # Messages for each distractor must be combined to exclude that distractor
-        if assigned_distractors:
-            # Process each distractor
-            for distractor_idx, assigned_distractor in enumerate(assigned_distractors):
-                # Get linked_source for this distractor
-                distractor_key = (assigned_distractor["date"], assigned_distractor["slot"])
-                linked_source = None
-                linked_source_id = None
-                if distractor_linked_sources and distractor_key in distractor_linked_sources:
-                    linked_source, linked_source_id = distractor_linked_sources[distractor_key]
+            raise ValueError("Missing generator_config entry: gmail.to_candidates (required when no participants available)")
+    
+    # Get task description from generator_config
+    task_description = generator_config.get("_task_description", "Find a meeting time")
+    
+    # Get third-party name for hints
+    fallback_names = generator_config.get("fallback_names", ["Alice", "Bob", "Carol", "Dave", "Eve"])
+    third_party_name = fallback_names[0] if fallback_names else "Amy"
+    
+    # Option C: fragmentation_depth * len(assigned_distractors) messages
+    # Each distractor gets fragmentation_depth incomplete messages
+    # Messages for each distractor must be combined to exclude that distractor
+    if assigned_distractors:
+        # Process each distractor
+        for distractor_idx, assigned_distractor in enumerate(assigned_distractors):
+            # Get linked_source for this distractor
+            distractor_key = (assigned_distractor["date"], assigned_distractor["slot"])
+            linked_source = None
+            linked_source_id = None
+            if distractor_linked_sources and distractor_key in distractor_linked_sources:
+                linked_source, linked_source_id = distractor_linked_sources[distractor_key]
+            
+            # Create one thread per distractor with fragmentation_depth messages
+            subject = f"Schedule update {distractor_idx + 1}"
+            
+            # Generate messages for this distractor using LLM
+            max_retries = 3
+            for retry in range(max_retries):
+                # Generate messages using LLM
+                generated_text = generate_with_llm(
+                    source_type="gmail",
+                    task_description=task_description,
+                    participants=participants if participants else [],
+                    all_canonical_slots=all_canonical_slots,
+                    assigned_distractors=[assigned_distractor],
+                    fragmentation_depth=fragmentation_depth,
+                    indirection_depth=indirection_depth,
+                    linked_source=linked_source,
+                    linked_source_id=linked_source_id,
+                    additional_context={
+                        "subject": subject,
+                        "from": from_addr,
+                        "to": to_addrs,
+                        "third_party_name": third_party_name
+                    }
+                )
                 
-                # Create one thread per distractor with fragmentation_depth messages
-                subject = subject_templates[distractor_idx % len(subject_templates)]
+                # Log generated text for debugging
+                print(f"\n[DEBUG] Gmail generation attempt {retry + 1}/{max_retries}")
+                print(f"[DEBUG] Generated text:\n{generated_text}\n")
                 
-                # Generate messages for this distractor using LLM
-                max_retries = 3
-                for retry in range(max_retries):
-                    # Generate messages using LLM
-                    generated_text = generate_with_llm(
-                        source_type="gmail",
-                        task_description=task_description,
-                        participants=participants if participants else [],
-                        all_canonical_slots=all_canonical_slots,
-                        assigned_distractors=[assigned_distractor],
-                        fragmentation_depth=fragmentation_depth,
-                        indirection_depth=indirection_depth,
-                        linked_source=linked_source,
-                        linked_source_id=linked_source_id,
-                        additional_context={
-                            "subject": subject,
-                            "from": from_addr,
-                            "to": to_addrs,
-                            "third_party_name": third_party_name
-                        }
-                    )
-                    
-                    # Validate generated data
-                    is_valid, error_msg = validate_generated_data(
-                        generated_text=generated_text,
-                        source_type="gmail",
-                        all_canonical_slots=all_canonical_slots,
-                        assigned_distractors=[assigned_distractor],
-                        fragmentation_depth=fragmentation_depth,
-                        indirection_depth=indirection_depth,
-                        linked_source=linked_source,
-                        linked_source_id=linked_source_id
-                    )
-                    
-                    if is_valid:
-                        # Parse LLM output - expect JSON array or newline-separated messages
-                        thread_messages = []
-                        try:
-                            parsed = json.loads(generated_text)
-                            if isinstance(parsed, list):
-                                # LLM returned list of messages
-                                for msg_idx, msg_data in enumerate(parsed):
-                                    global_msg_idx = distractor_idx * fragmentation_depth + msg_idx
-                                    timestamp = timestamp_patterns[global_msg_idx % len(timestamp_patterns)]
-                                    
-                                    if isinstance(msg_data, dict):
-                                        text = msg_data.get("text", msg_data.get("content", ""))
-                                    elif isinstance(msg_data, str):
-                                        text = msg_data
-                                    else:
-                                        continue
-                                    
-                                    thread_messages.append({
-                                        "from": from_addr,
-                                        "to": to_addrs,
-                                        "subject": subject,
-                                        "text": text,
-                                        "timestamp": timestamp
-                                    })
-                            else:
-                                # Not a list, treat as single message
-                                timestamp = timestamp_patterns[distractor_idx * fragmentation_depth % len(timestamp_patterns)]
-                                thread_messages.append({
-                                    "from": from_addr,
-                                    "to": to_addrs,
-                                    "subject": subject,
-                                    "text": generated_text,
-                                    "timestamp": timestamp
-                                })
-                        except json.JSONDecodeError:
-                            # Not JSON, split by newlines or treat as single message
-                            lines = generated_text.strip().split('\n')
-                            for msg_idx, line in enumerate(lines):
-                                line = line.strip()
-                                if line:
-                                    global_msg_idx = distractor_idx * fragmentation_depth + msg_idx
-                                    timestamp = timestamp_patterns[global_msg_idx % len(timestamp_patterns)]
-                                    thread_messages.append({
-                                        "from": from_addr,
-                                        "to": to_addrs,
-                                        "subject": subject,
-                                        "text": line,
-                                        "timestamp": timestamp
-                                    })
-                        
-                        # Ensure we have fragmentation_depth messages for this distractor
-                        while len(thread_messages) < fragmentation_depth:
-                            global_msg_idx = distractor_idx * fragmentation_depth + len(thread_messages)
-                            timestamp = timestamp_patterns[global_msg_idx % len(timestamp_patterns)]
-                            thread_messages.append({
-                                "from": from_addr,
-                                "to": to_addrs,
-                                "subject": subject,
-                                "text": generated_text.split('\n')[0] if '\n' in generated_text else generated_text,
-                                "timestamp": timestamp
-                            })
-                        
-                        threads.append({
-                            "thread_id": f"thread_{distractor_idx + 1:03d}",
-                            "subject": subject,
-                            "messages": thread_messages
-                        })
-                        
-                        break  # Success, exit retry loop
-                    else:
-                        if retry == max_retries - 1:
-                            # Last retry failed, use fallback template-based generation
-                            thread_messages = []
-                            
-                            for msg_idx in range(fragmentation_depth):
+                # Validate generated data
+                is_valid, error_msg = validate_generated_data(
+                    generated_text=generated_text,
+                    source_type="gmail",
+                    all_canonical_slots=all_canonical_slots,
+                    assigned_distractors=[assigned_distractor],
+                    fragmentation_depth=fragmentation_depth,
+                    indirection_depth=indirection_depth,
+                    linked_source=linked_source,
+                    linked_source_id=linked_source_id
+                )
+                
+                if is_valid:
+                    # Parse LLM output - expect JSON array or newline-separated messages
+                    thread_messages = []
+                    try:
+                        parsed = json.loads(generated_text)
+                        if isinstance(parsed, list):
+                            # LLM returned list of messages
+                            for msg_idx, msg_data in enumerate(parsed):
                                 global_msg_idx = distractor_idx * fragmentation_depth + msg_idx
                                 timestamp = timestamp_patterns[global_msg_idx % len(timestamp_patterns)]
                                 
-                                if msg_idx == 0:
-                                    text = f"There might be an issue with the time {third_party_name} mentioned."
-                                elif msg_idx == 1:
-                                    template = cancellation_templates[msg_idx % len(cancellation_templates)]
-                                    text = template.format(
-                                        date=assigned_distractor["date"],
-                                        slot=assigned_distractor["slot"]
-                                    )
+                                if isinstance(msg_data, dict):
+                                    text = msg_data.get("text", msg_data.get("content", ""))
+                                elif isinstance(msg_data, str):
+                                    text = msg_data
                                 else:
-                                    template = cancellation_templates[msg_idx % len(cancellation_templates)]
-                                    text = template.format(
-                                        date=assigned_distractor["date"],
-                                        slot=assigned_distractor["slot"]
-                                    )
-                                    text = f"{third_party_name} mentioned: {text}"
-                                
-                                if indirection_depth >= 2 and linked_source and linked_source_id and msg_idx == fragmentation_depth - 1:
-                                    if linked_source == "slack":
-                                        text += f" Time mentioned in Slack channel {linked_source_id}."
-                                    elif linked_source == "jira":
-                                        text += f" Time mentioned in Jira issue {linked_source_id}."
-                                    elif linked_source == "drive":
-                                        text += f" Time mentioned in Drive document '{linked_source_id}'."
-                                    elif linked_source == "gmail":
-                                        text += f" Related to Gmail thread {linked_source_id}."
+                                    continue
                                 
                                 thread_messages.append({
                                     "from": from_addr,
@@ -1420,15 +1250,59 @@ def generate_gmail(
                                     "text": text,
                                     "timestamp": timestamp
                                 })
-                            
-                            threads.append({
-                                "thread_id": f"thread_{distractor_idx + 1:03d}",
+                        else:
+                            # Not a list, treat as single message
+                            timestamp = timestamp_patterns[distractor_idx * fragmentation_depth % len(timestamp_patterns)]
+                            thread_messages.append({
+                                "from": from_addr,
+                                "to": to_addrs,
                                 "subject": subject,
-                                "messages": thread_messages
+                                "text": generated_text,
+                                "timestamp": timestamp
                             })
-        else:
+                    except json.JSONDecodeError:
+                        # Not JSON, split by newlines or treat as single message
+                        lines = generated_text.strip().split('\n')
+                        for msg_idx, line in enumerate(lines):
+                            line = line.strip()
+                            if line:
+                                global_msg_idx = distractor_idx * fragmentation_depth + msg_idx
+                                timestamp = timestamp_patterns[global_msg_idx % len(timestamp_patterns)]
+                                thread_messages.append({
+                                    "from": from_addr,
+                                    "to": to_addrs,
+                                    "subject": subject,
+                                    "text": line,
+                                    "timestamp": timestamp
+                                })
+                    
+                    # Ensure we have fragmentation_depth messages for this distractor
+                    while len(thread_messages) < fragmentation_depth:
+                        global_msg_idx = distractor_idx * fragmentation_depth + len(thread_messages)
+                        timestamp = timestamp_patterns[global_msg_idx % len(timestamp_patterns)]
+                        thread_messages.append({
+                            "from": from_addr,
+                            "to": to_addrs,
+                            "subject": subject,
+                            "text": generated_text.split('\n')[0] if '\n' in generated_text else generated_text,
+                            "timestamp": timestamp
+                        })
+                    
+                    threads.append({
+                        "thread_id": f"thread_{distractor_idx + 1:03d}",
+                        "subject": subject,
+                        "messages": thread_messages
+                    })
+                    
+                    break  # Success, exit retry loop
+                else:
+                    print(f"[DEBUG] Validation failed: {error_msg}")
+                    if retry == max_retries - 1:
+                        # Last retry failed, raise error with generated text
+                        raise ValueError(f"Failed to generate valid Gmail messages after {max_retries} attempts. Last error: {error_msg}\n\nGenerated text:\n{generated_text}")
+    else:
             # Fallback: create one thread with fragmentation_depth messages (old behavior)
-            subject = subject_templates[0]
+            subject = "Schedule update"
             thread_messages = []
             
             for msg_idx in range(fragmentation_depth):
@@ -1537,6 +1411,7 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Dict[str, Pat
         fragmentation_depth=fragmentation_depth,
         generator_config=generator_config,
         min_required_source=min_required_source,
+        indirection_depth=indirection_depth,
         current_date=current_date
     )
     
