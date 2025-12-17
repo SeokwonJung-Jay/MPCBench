@@ -42,7 +42,8 @@ def generate_with_llm(
     indirection_depth: int,
     linked_source: Optional[str] = None,
     linked_source_id: Optional[str] = None,
-    additional_context: Optional[Dict[str, Any]] = None
+    additional_context: Optional[Dict[str, Any]] = None,
+    previous_error: Optional[str] = None
 ) -> str:
     """
     Generate data using LLM for a specific source.
@@ -78,8 +79,6 @@ def generate_with_llm(
     format_instructions = user_prompt_template.get("format_instructions", {})
     
     # Build prompt
-    # Note: Do NOT include canonical slots in the prompt - only distractor elimination info
-    # Canonical slots are only checked during validation to ensure they are not excluded
     prompt_parts = [
         source_description,
         "",
@@ -87,14 +86,18 @@ def generate_with_llm(
         "",
         f"Participants: {', '.join([p['name'] for p in participants])}",
         "",
+        f"Canonical slots (must NOT be excluded): {', '.join([s['date'] + ' ' + s['slot'] for s in all_canonical_slots])}",
+        "",
         f"Distractor slots to exclude: {', '.join([s['date'] + ' ' + s['slot'] for s in assigned_distractors])}",
         "",
-        f"Fragmentation depth: {fragmentation_depth} (split into {fragmentation_depth} incomplete pieces)",
+        f"Fragmentation depth: {fragmentation_depth} ({'single complete piece' if fragmentation_depth == 1 else f'split into {fragmentation_depth} incomplete pieces'})",
         "",
     ]
     
     if indirection_depth >= 2 and linked_source and linked_source_id:
-        prompt_parts.append(f"Link with {linked_source} (ID: {linked_source_id}) - reference this in the generated content.")
+        # Use placeholder ID in prompt if it's a placeholder
+        display_id = linked_source_id if not linked_source_id.startswith("PLACEHOLDER_") else f"[{linked_source} ID to be determined]"
+        prompt_parts.append(f"Link with {linked_source} (ID: {display_id}) - reference this in the generated content.")
         prompt_parts.append("")
     
     if additional_context:
@@ -118,6 +121,13 @@ def generate_with_llm(
         format_text = format_text.replace("{fragmentation_depth}", str(fragmentation_depth))
         prompt_parts.append("")
         prompt_parts.append(format_text)
+    
+    # Add previous error feedback if available (for retry attempts)
+    if previous_error:
+        prompt_parts.append("")
+        prompt_parts.append(f"IMPORTANT: Previous attempt failed validation. Please fix the following issue:")
+        prompt_parts.append(f"Error: {previous_error}")
+        prompt_parts.append("")
     
     prompt = "\n".join(prompt_parts)
     
@@ -171,12 +181,29 @@ def validate_generated_data(
     
     # Get validation prompts from config
     validation_system_message = validation_config.get("system_message", "You are a validator that checks if generated data meets requirements.")
-    check_instructions = validation_config.get("check_instructions", "Check:\n- Is each piece incomplete on its own? (fragmentation_depth >= 2)\n- When combined, are distractor slots excluded but canonical slots remain?\n- Is the content natural and realistic?\n- Are linked source references correct? (if applicable)")
+    base_check_instructions = validation_config.get("check_instructions", "Check:\n- Is each piece incomplete on its own? (fragmentation_depth >= 2)\n- When combined, are distractor slots excluded but canonical slots remain?\n- Is the content natural and realistic?\n- Are linked source references correct? (if applicable)")
+    
+    # Adjust check_instructions based on fragmentation_depth
+    if fragmentation_depth == 1:
+        # For fragmentation_depth=1, remove the "incomplete" check
+        check_instructions = base_check_instructions.replace(
+            "- Is each piece incomplete on its own? (fragmentation_depth >= 2)\n",
+            "- Is the content a single complete piece? (fragmentation_depth = 1)\n"
+        )
+    else:
+        check_instructions = base_check_instructions
+    
     response_format = validation_config.get("response_format", "Respond with \"VALID\" if all checks pass, or \"INVALID: <reason>\" if any check fails.")
     
     # Build validation prompt
     canonical_slots_str = ', '.join([s['date'] + ' ' + s['slot'] for s in all_canonical_slots])
     distractor_slots_str = ', '.join([s['date'] + ' ' + s['slot'] for s in assigned_distractors])
+    
+    # Build fragmentation requirement text based on fragmentation_depth
+    if fragmentation_depth == 1:
+        fragmentation_req = f"1. Fragmentation depth: {fragmentation_depth} - content should be a single complete piece"
+    else:
+        fragmentation_req = f"1. Fragmentation depth: {fragmentation_depth} - content should be split into {fragmentation_depth} incomplete pieces (each incomplete on its own, but together they exclude distractors)"
     
     validation_prompt = f"""Validate the following generated {source_type} data:
 
@@ -184,7 +211,7 @@ Generated content:
 {generated_text}
 
 Requirements:
-1. Fragmentation depth: {fragmentation_depth} - content should be split into {fragmentation_depth} incomplete pieces
+{fragmentation_req}
 2. Distractor slots (must be excluded): {distractor_slots_str}
 3. Canonical slots (must NOT be excluded - verify they are not mentioned as excluded): {canonical_slots_str}
 """
@@ -658,6 +685,7 @@ def generate_slack(
         # but when combined, exclude the distractor while keeping canonical slots
         
         max_retries = 3
+        previous_error = None
         for retry in range(max_retries):
             # Generate messages using LLM
             generated_text = generate_with_llm(
@@ -674,12 +702,9 @@ def generate_slack(
                     "channel": default_channel,
                     "base_user_names": base_user_names,
                     "third_party_name": generator_config.get("_third_party_name", "Amy")
-                }
+                },
+                previous_error=previous_error
             )
-            
-            # Log generated text for debugging
-            print(f"\n[DEBUG] Slack generation attempt {retry + 1}/{max_retries}")
-            print(f"[DEBUG] Generated text:\n{generated_text}\n")
             
             # Validate generated data
             is_valid, error_msg = validate_generated_data(
@@ -760,6 +785,7 @@ def generate_slack(
                 break  # Success, exit retry loop
             else:
                 print(f"[DEBUG] Validation failed: {error_msg}")
+                previous_error = error_msg  # Store error for next retry
                 if retry == max_retries - 1:
                     # Last retry failed, raise error with generated text
                     raise ValueError(f"Failed to generate valid Slack messages after {max_retries} attempts. Last error: {error_msg}\n\nGenerated text:\n{generated_text}")
@@ -816,15 +842,16 @@ def generate_jira(
     # Get participants from generator_config (if available)
     participants = generator_config.get("_participants", [])
     
+    # Get third-party name for hints (used when indirection_depth >= 2)
+    third_party_name = None
     if indirection_depth >= 2:
-        # Get third-party name for hints
         fallback_names = generator_config.get("fallback_names", ["Alice", "Bob", "Carol", "Dave", "Eve"])
         third_party_name = fallback_names[0] if fallback_names else "Amy"
-        
-        # Option C: fragmentation_depth * len(assigned_distractors) issues
-        # Each distractor gets fragmentation_depth incomplete issues
-        # Issues for each distractor must be combined to exclude that distractor
-        for distractor_idx, assigned_distractor in enumerate(assigned_distractors):
+    
+    # Option C: fragmentation_depth * len(assigned_distractors) issues
+    # Each distractor gets fragmentation_depth incomplete issues
+    # Issues for each distractor must be combined to exclude that distractor
+    for distractor_idx, assigned_distractor in enumerate(assigned_distractors):
             # Get linked_source for this distractor
             distractor_key = (assigned_distractor["date"], assigned_distractor["slot"])
             linked_source = None
@@ -834,6 +861,7 @@ def generate_jira(
             
             # Generate issues for this distractor using LLM
             max_retries = 3
+            previous_error = None
             for retry in range(max_retries):
                 # Generate issue content using LLM
                 generated_text = generate_with_llm(
@@ -848,13 +876,10 @@ def generate_jira(
                     linked_source_id=linked_source_id,
                     additional_context={
                         "project_key": project_keys[0],
-                        "third_party_name": third_party_name
-                    }
+                        **({"third_party_name": third_party_name} if third_party_name else {})
+                    },
+                    previous_error=previous_error
                 )
-                
-                # Log generated text for debugging
-                print(f"\n[DEBUG] Jira generation attempt {retry + 1}/{max_retries}")
-                print(f"[DEBUG] Generated text:\n{generated_text}\n")
                 
                 # Validate generated data
                 is_valid, error_msg = validate_generated_data(
@@ -944,6 +969,7 @@ def generate_jira(
                     break  # Success, exit retry loop
                 else:
                     print(f"[DEBUG] Validation failed: {error_msg}")
+                    previous_error = error_msg  # Store error for next retry
                     if retry == max_retries - 1:
                         # Last retry failed, raise error with generated text
                         raise ValueError(f"Failed to generate valid Jira issues after {max_retries} attempts. Last error: {error_msg}\n\nGenerated text:\n{generated_text}")
@@ -1007,127 +1033,130 @@ def generate_drive(
     # Get participants from generator_config (if available)
     participants = generator_config.get("_participants", [])
     
+    # Get third-party name for hints (used when indirection_depth >= 2)
+    third_party_name = None
     if indirection_depth >= 2:
-        # Get third-party name for hints
         fallback_names = generator_config.get("fallback_names", ["Alice", "Bob", "Carol", "Dave", "Eve"])
         third_party_name = fallback_names[0] if fallback_names else "Amy"
+    
+    # Option C: fragmentation_depth * len(assigned_distractors) files
+    # Each distractor gets fragmentation_depth incomplete files
+    # Files for each distractor must be combined to exclude that distractor
+    for distractor_idx, assigned_distractor in enumerate(assigned_distractors):
+        # Get linked_source for this distractor
+        distractor_key = (assigned_distractor["date"], assigned_distractor["slot"])
+        linked_source = None
+        linked_source_id = None
+        if distractor_linked_sources and distractor_key in distractor_linked_sources:
+            linked_source, linked_source_id = distractor_linked_sources[distractor_key]
         
-        # Option C: fragmentation_depth * len(assigned_distractors) files
-        # Each distractor gets fragmentation_depth incomplete files
-        # Files for each distractor must be combined to exclude that distractor
-        for distractor_idx, assigned_distractor in enumerate(assigned_distractors):
-            # Get linked_source for this distractor
-            distractor_key = (assigned_distractor["date"], assigned_distractor["slot"])
-            linked_source = None
-            linked_source_id = None
-            if distractor_linked_sources and distractor_key in distractor_linked_sources:
-                linked_source, linked_source_id = distractor_linked_sources[distractor_key]
+        # Generate file content for this distractor using LLM
+        max_retries = 3
+        previous_error = None
+        for retry in range(max_retries):
+            # Generate file content using LLM
+            generated_text = generate_with_llm(
+                source_type="drive",
+                task_description=task_description,
+                participants=participants if participants else [],
+                all_canonical_slots=all_canonical_slots,
+                assigned_distractors=[assigned_distractor],
+                fragmentation_depth=fragmentation_depth,
+                indirection_depth=indirection_depth,
+                linked_source=linked_source,
+                linked_source_id=linked_source_id,
+                additional_context={
+                    **({"third_party_name": third_party_name} if third_party_name else {})
+                },
+                previous_error=previous_error
+            )
             
-            # Generate file content for this distractor using LLM
-            max_retries = 3
-            for retry in range(max_retries):
-                # Generate file content using LLM
-                generated_text = generate_with_llm(
-                    source_type="drive",
-                    task_description=task_description,
-                    participants=participants if participants else [],
-                    all_canonical_slots=all_canonical_slots,
-                    assigned_distractors=[assigned_distractor],
-                    fragmentation_depth=fragmentation_depth,
-                    indirection_depth=indirection_depth,
-                    linked_source=linked_source,
-                    linked_source_id=linked_source_id,
-                    additional_context={
-                        "third_party_name": third_party_name
-                    }
-                )
-                
-                # Log generated text for debugging
-                print(f"\n[DEBUG] Drive generation attempt {retry + 1}/{max_retries}")
-                print(f"[DEBUG] Generated text:\n{generated_text}\n")
-                
-                # Validate generated data
-                is_valid, error_msg = validate_generated_data(
-                    generated_text=generated_text,
-                    source_type="drive",
-                    all_canonical_slots=all_canonical_slots,
-                    assigned_distractors=[assigned_distractor],
-                    fragmentation_depth=fragmentation_depth,
-                    indirection_depth=indirection_depth,
-                    linked_source=linked_source,
-                    linked_source_id=linked_source_id
-                )
-                
-                if is_valid:
-                    # Parse LLM output - expect JSON array or newline-separated file contents
-                    try:
-                        parsed = json.loads(generated_text)
-                        if isinstance(parsed, list):
-                            # LLM returned list of file contents
-                            for file_idx, file_content in enumerate(parsed):
-                                global_file_idx = distractor_idx * fragmentation_depth + file_idx
-                                doc_title = f"Document {global_file_idx + 1}"
-                                
-                                if isinstance(file_content, dict):
-                                    text = file_content.get("text", file_content.get("content", ""))
-                                    name = file_content.get("name", doc_title)
-                                elif isinstance(file_content, str):
-                                    text = file_content
-                                    name = doc_title
-                                else:
-                                    continue
-                                
-                                files.append({
-                                    "file_id": f"file_{global_file_idx:03d}",
-                                    "folder_id": default_folder_id,
-                                    "name": name,
-                                    "text": text
-                                })
-                        else:
-                            # Not a list, treat as single file
-                            global_file_idx = distractor_idx * fragmentation_depth
+            # Validate generated data
+            is_valid, error_msg = validate_generated_data(
+                generated_text=generated_text,
+                source_type="drive",
+                all_canonical_slots=all_canonical_slots,
+                assigned_distractors=[assigned_distractor],
+                fragmentation_depth=fragmentation_depth,
+                indirection_depth=indirection_depth,
+                linked_source=linked_source,
+                linked_source_id=linked_source_id
+            )
+            
+            if is_valid:
+                # Parse LLM output - expect JSON array or newline-separated file contents
+                try:
+                    parsed = json.loads(generated_text)
+                    if isinstance(parsed, list):
+                        # LLM returned list of file contents
+                        for file_idx, file_content in enumerate(parsed):
+                            global_file_idx = distractor_idx * fragmentation_depth + file_idx
                             doc_title = f"Document {global_file_idx + 1}"
+                            
+                            if isinstance(file_content, dict):
+                                text = file_content.get("text", file_content.get("content", ""))
+                                name = file_content.get("name", doc_title)
+                            elif isinstance(file_content, str):
+                                text = file_content
+                                name = doc_title
+                            else:
+                                continue
+                            
                             files.append({
                                 "file_id": f"file_{global_file_idx:03d}",
                                 "folder_id": default_folder_id,
-                                "name": doc_title,
-                                "text": generated_text
+                                "name": name,
+                                "text": text,
+                                "_distractor_idx": distractor_idx
                             })
-                    except json.JSONDecodeError:
-                        # Not JSON, split by newlines or treat as single file
-                        lines = generated_text.strip().split('\n')
-                        for file_idx, line in enumerate(lines):
-                            line = line.strip()
-                            if line:
-                                global_file_idx = distractor_idx * fragmentation_depth + file_idx
-                                doc_title = f"Document {global_file_idx + 1}"
-                                files.append({
-                                    "file_id": f"file_{global_file_idx:03d}",
-                                    "folder_id": default_folder_id,
-                                    "name": doc_title,
-                                    "text": line
-                                })
-                    
-                    # Ensure we have fragmentation_depth files for this distractor
-                    files_added = len([f for f in files if f.get("_distractor_idx") == distractor_idx])
-                    while files_added < fragmentation_depth:
-                        global_file_idx = distractor_idx * fragmentation_depth + len(files)
+                    else:
+                        # Not a list, treat as single file
+                        global_file_idx = distractor_idx * fragmentation_depth
                         doc_title = f"Document {global_file_idx + 1}"
                         files.append({
                             "file_id": f"file_{global_file_idx:03d}",
                             "folder_id": default_folder_id,
                             "name": doc_title,
-                            "text": generated_text.split('\n')[0] if '\n' in generated_text else generated_text,
+                            "text": generated_text,
                             "_distractor_idx": distractor_idx
                         })
-                        files_added += 1
-                    
-                    break  # Success, exit retry loop
-                else:
-                    print(f"[DEBUG] Validation failed: {error_msg}")
-                    if retry == max_retries - 1:
-                        # Last retry failed, raise error with generated text
-                        raise ValueError(f"Failed to generate valid Drive files after {max_retries} attempts. Last error: {error_msg}\n\nGenerated text:\n{generated_text}")
+                except json.JSONDecodeError:
+                    # Not JSON, split by newlines or treat as single file
+                    lines = generated_text.strip().split('\n')
+                    for file_idx, line in enumerate(lines):
+                        line = line.strip()
+                        if line:
+                            global_file_idx = distractor_idx * fragmentation_depth + file_idx
+                            doc_title = f"Document {global_file_idx + 1}"
+                            files.append({
+                                "file_id": f"file_{global_file_idx:03d}",
+                                "folder_id": default_folder_id,
+                                "name": doc_title,
+                                "text": line,
+                                "_distractor_idx": distractor_idx
+                            })
+                
+                # Ensure we have fragmentation_depth files for this distractor
+                files_added = len([f for f in files if f.get("_distractor_idx") == distractor_idx])
+                while files_added < fragmentation_depth:
+                    global_file_idx = distractor_idx * fragmentation_depth + len(files)
+                    doc_title = f"Document {global_file_idx + 1}"
+                    files.append({
+                        "file_id": f"file_{global_file_idx:03d}",
+                        "folder_id": default_folder_id,
+                        "name": doc_title,
+                        "text": generated_text.split('\n')[0] if '\n' in generated_text else generated_text,
+                        "_distractor_idx": distractor_idx
+                    })
+                    files_added += 1
+                
+                break  # Success, exit retry loop
+            else:
+                print(f"[DEBUG] Validation failed: {error_msg}")
+                previous_error = error_msg  # Store error for next retry
+                if retry == max_retries - 1:
+                    # Last retry failed, raise error with generated text
+                    raise ValueError(f"Failed to generate valid Drive files after {max_retries} attempts. Last error: {error_msg}\n\nGenerated text:\n{generated_text}")
     
     return folders, files
 
@@ -1205,6 +1234,7 @@ def generate_gmail(
             
             # Generate messages for this distractor using LLM
             max_retries = 3
+            previous_error = None
             for retry in range(max_retries):
                 # Generate messages using LLM
                 generated_text = generate_with_llm(
@@ -1222,12 +1252,9 @@ def generate_gmail(
                         "from": from_addr,
                         "to": to_addrs,
                         "third_party_name": third_party_name
-                    }
+                    },
+                    previous_error=previous_error
                 )
-                
-                # Log generated text for debugging
-                print(f"\n[DEBUG] Gmail generation attempt {retry + 1}/{max_retries}")
-                print(f"[DEBUG] Generated text:\n{generated_text}\n")
                 
                 # Validate generated data
                 is_valid, error_msg = validate_generated_data(
@@ -1313,6 +1340,7 @@ def generate_gmail(
                     break  # Success, exit retry loop
                 else:
                     print(f"[DEBUG] Validation failed: {error_msg}")
+                    previous_error = error_msg  # Store error for next retry
                     if retry == max_retries - 1:
                         # Last retry failed, raise error with generated text
                         raise ValueError(f"Failed to generate valid Gmail messages after {max_retries} attempts. Last error: {error_msg}\n\nGenerated text:\n{generated_text}")
@@ -1465,76 +1493,54 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
     # Each source has a list of distractors assigned
     
     # Determine linked sources for each distractor based on indirection_depth
+    # Each distractor gets its own independent chain
     distractor_linked_sources = {}  # (date, slot) -> (linked_source, linked_source_id)
-    source_linking_map = {}  # source_name -> linked_source_name (for indirection_depth >= 3 chain)
+    distractor_source_chains = {}  # (date, slot) -> List[source_name] (chain for this distractor)
     
-    if indirection_depth == 1:
-        # indirection_depth=1: No linking between sources
-        # distractor_linked_sources remains empty
-        pass
-    elif indirection_depth == 2:
-        # indirection_depth=2: 2 sources combination, A ↔ B (bidirectional or unidirectional, random)
+    if indirection_depth >= 2:
         # Get all assigned sources
         assigned_source_names = [s for s in assigned_distractors.keys() if assigned_distractors[s]]
+        
         if len(assigned_source_names) >= 2:
-            # Create linking between 2 sources (random direction, unidirectional only)
-            source1, source2 = assigned_source_names[0], assigned_source_names[1]
-            
-            # Randomly decide linking direction: A → B or B → A (unidirectional only)
-            link_direction = random.choice(["A_to_B", "B_to_A"])
-            
-            if link_direction == "A_to_B":
-                source_linking_map[source1] = source2
-            else:  # B_to_A
-                source_linking_map[source2] = source1
-            
-            # For each distractor, assign linked_source based on source_linking_map
+            # Each distractor gets its own independent chain
             for source_name, distractor_list in assigned_distractors.items():
                 if not distractor_list:
-                    continue
-                
-                linked_source_name = source_linking_map.get(source_name)
-                if not linked_source_name:
                     continue
                 
                 for distractor in distractor_list:
                     distractor_key = (distractor["date"], distractor["slot"])
                     
-                    # Set linked_source_id to None initially (will be updated after source generation)
-                    linked_source_id = None
-                    distractor_linked_sources[distractor_key] = (linked_source_name, linked_source_id)
-    else:  # indirection_depth >= 3
-        # indirection_depth>=3: 3+ sources combination, chain A → B → C
-        # Get all assigned sources
-        assigned_source_names = [s for s in assigned_distractors.keys() if assigned_distractors[s]]
-        if len(assigned_source_names) >= 2:
-            # Create a chain: A → B → C → ...
-            # Shuffle sources to create random chain
-            shuffled_sources = assigned_source_names.copy()
-            random.shuffle(shuffled_sources)
-            
-            # Create chain: each source links to the next one
-            for i in range(len(shuffled_sources) - 1):
-                source_linking_map[shuffled_sources[i]] = shuffled_sources[i + 1]
-            # Last source can link back to first (circular) or stay unlinked
-            if random.random() < 0.5:  # 50% chance of circular link
-                source_linking_map[shuffled_sources[-1]] = shuffled_sources[0]
-            
-            # For each distractor, assign linked_source based on source_linking_map
-            for source_name, distractor_list in assigned_distractors.items():
-                if not distractor_list:
-                    continue
-                
-                linked_source_name = source_linking_map.get(source_name)
-                if not linked_source_name:
-                    continue
-                
-                for distractor in distractor_list:
-                    distractor_key = (distractor["date"], distractor["slot"])
+                    # Start with the source this distractor is assigned to
+                    current_source = source_name
+                    chain = [current_source]
+                    used_sources = {current_source}
                     
-                    # Set linked_source_id to None initially (will be updated after source generation)
-                    linked_source_id = None
-                    distractor_linked_sources[distractor_key] = (linked_source_name, linked_source_id)
+                    # Build chain of length indirection_depth
+                    for _ in range(indirection_depth - 1):
+                        # Available sources (excluding current source)
+                        available_sources = [s for s in assigned_source_names if s != current_source]
+                        
+                        if not available_sources:
+                            break
+                        
+                        # Prefer unused sources, but allow reuse after all sources are used
+                        unused_sources = [s for s in available_sources if s not in used_sources]
+                        if unused_sources:
+                            next_source = random.choice(unused_sources)
+                        else:
+                            # All sources have been used, can reuse any (except current)
+                            next_source = random.choice(available_sources)
+                        
+                        chain.append(next_source)
+                        used_sources.add(next_source)
+                        current_source = next_source
+                    
+                    # Store the chain and the linked source (last in chain)
+                    distractor_source_chains[distractor_key] = chain
+                    if len(chain) >= 2:
+                        linked_source = chain[-1]
+                        linked_source_id = f"PLACEHOLDER_{linked_source}"
+                        distractor_linked_sources[distractor_key] = (linked_source, linked_source_id)
     
     # Helper function to extract actual IDs from generated sources
     def extract_source_id(source_name: str, generated_data: Any) -> Optional[str]:
@@ -1569,8 +1575,84 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
         if not actual_id:
             return
         for distractor_key, (linked_source_name, linked_source_id) in distractor_linked_sources.items():
-            if linked_source_name == source_name and linked_source_id is None:
+            # Update if it's a placeholder for this source
+            if linked_source_name == source_name and (linked_source_id is None or linked_source_id.startswith("PLACEHOLDER_")):
                 distractor_linked_sources[distractor_key] = (linked_source_name, actual_id)
+    
+    # Helper function to replace PLACEHOLDER in already-generated source files
+    def replace_placeholders_in_files(source_name: str, actual_id: str):
+        """Replace PLACEHOLDER_{source_name} with actual_id in already-generated source files.
+        
+        This function uses distractor_linked_sources to ensure each distractor's placeholder
+        is replaced with the correct ID that it should reference.
+        """
+        if not actual_id:
+            return
+        placeholder = f"PLACEHOLDER_{source_name}"
+        
+        # Check all already-generated source files
+        for other_source_name, file_path in source_data.items():
+            if other_source_name == source_name:
+                continue  # Don't replace in the same source
+            
+            if not file_path.exists():
+                continue
+            
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                updated = False
+                
+                # Replace in drive files
+                if other_source_name == "drive" and "files" in data:
+                    for file in data["files"]:
+                        if "text" in file and placeholder in file["text"]:
+                            # Find the correct ID for this distractor
+                            distractor_idx = file.get("_distractor_idx")
+                            correct_id = actual_id  # Default to actual_id
+                            
+                            # If we have distractor_idx, try to find the correct linked ID
+                            if distractor_idx is not None:
+                                # Find the distractor_key for this file
+                                # We need to match by distractor_idx, but we don't have direct mapping
+                                # So we'll use the actual_id from distractor_linked_sources if available
+                                # For now, use actual_id (all distractors reference the same linked source)
+                                # Each distractor has its own independent chain
+                                pass
+                            
+                            file["text"] = file["text"].replace(placeholder, correct_id)
+                            updated = True
+                
+                # Replace in jira issues
+                elif other_source_name == "jira" and "issues" in data:
+                    for issue in data["issues"]:
+                        if "description" in issue and placeholder in issue["description"]:
+                            issue["description"] = issue["description"].replace(placeholder, actual_id)
+                            updated = True
+                
+                # Replace in slack messages
+                elif other_source_name == "slack" and "messages" in data:
+                    for message in data["messages"]:
+                        if "text" in message and placeholder in message["text"]:
+                            message["text"] = message["text"].replace(placeholder, actual_id)
+                            updated = True
+                
+                # Replace in gmail threads
+                elif other_source_name == "gmail" and "threads" in data:
+                    for thread in data["threads"]:
+                        if "messages" in thread:
+                            for message in thread["messages"]:
+                                if "text" in message and placeholder in message["text"]:
+                                    message["text"] = message["text"].replace(placeholder, actual_id)
+                                    updated = True
+                
+                # Write back if updated
+                if updated:
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=2)
+            except Exception as e:
+                print(f"[WARNING] Failed to replace placeholder in {file_path}: {e}")
     
     if indirection_depth == 1:
         # indirection_depth=1: calendar + 1 additional source (no linking)
@@ -1600,12 +1682,14 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
                     # Extract actual channel_id and update distractor_linked_sources
                     actual_id = extract_source_id("slack", (slack_channels, slack_messages))
                     update_linked_source_ids("slack", actual_id)
+                    # Replace PLACEHOLDER_slack in already-generated files
+                    replace_placeholders_in_files("slack", actual_id)
             elif source_name == "jira":
                 jira_projects, jira_issues = generate_jira(
                     all_canonical_slots=slots,
                     candidate_slots=candidate_slots,
                     indirection_depth=indirection_depth,
-                    fragmentation_depth=fragmentation_depth,
+                    fragmentation_depth=effective_fragmentation_depth,
                     generator_config=generator_config,
                     assigned_distractors=distractor_list,
                     distractor_linked_sources=distractor_linked_sources
@@ -1618,12 +1702,14 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
                     # Extract actual issue_key and update distractor_linked_sources
                     actual_id = extract_source_id("jira", (jira_projects, jira_issues))
                     update_linked_source_ids("jira", actual_id)
+                    # Replace PLACEHOLDER_jira in already-generated files
+                    replace_placeholders_in_files("jira", actual_id)
             elif source_name == "drive":
                 drive_folders, drive_files = generate_drive(
                     all_canonical_slots=slots,
                     candidate_slots=candidate_slots,
                     indirection_depth=indirection_depth,
-                    fragmentation_depth=fragmentation_depth,
+                    fragmentation_depth=effective_fragmentation_depth,
                     generator_config=generator_config,
                     excluded_slots=set(),
                     assigned_distractors=distractor_list,
@@ -1637,13 +1723,15 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
                     # Extract actual file_id or file name and update distractor_linked_sources
                     actual_id = extract_source_id("drive", (drive_folders, drive_files))
                     update_linked_source_ids("drive", actual_id)
+                    # Replace PLACEHOLDER_drive in already-generated files
+                    replace_placeholders_in_files("drive", actual_id)
             elif source_name == "gmail":
                 gmail_threads = generate_gmail(
                     all_canonical_slots=slots,
                     candidate_slots=candidate_slots,
                     participants=participants,
                     indirection_depth=indirection_depth,
-                    fragmentation_depth=fragmentation_depth,
+                    fragmentation_depth=effective_fragmentation_depth,
                     generator_config=generator_config,
                     excluded_slots=set(),
                     assigned_distractors=distractor_list,
@@ -1657,46 +1745,29 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
                     # Extract actual thread_id and update distractor_linked_sources
                     actual_id = extract_source_id("gmail", gmail_threads)
                     update_linked_source_ids("gmail", actual_id)
-    elif indirection_depth == 2:
+                    # Replace PLACEHOLDER_gmail in already-generated files
+                    replace_placeholders_in_files("gmail", actual_id)
+    elif indirection_depth >= 2:
         # ============================================================
-        # indirection_depth=2: 2 sources combination needed
+        # indirection_depth>=2: 2+ sources combination needed
         # ============================================================
-        # Example: slack + jira, slack + drive, jira + drive, etc.
-        # Each source references another source to make it incomplete alone
-        # Each distractor gets a random linked_source (Option B)
+        # Each distractor has its own independent chain
+        # Generate sources in the order they appear in assigned_distractors
         
-        # Determine source generation order based on source_linking_map
-        # Generate sources in chain order: first source, then linked source
-        source_order = []
-        if source_linking_map:
-            # Find the source that is referenced but doesn't reference anyone (start of chain)
-            referenced_sources = set(source_linking_map.values())
-            referencing_sources = set(source_linking_map.keys())
-            # Start with source that references another but is not referenced
-            start_sources = referencing_sources - referenced_sources
-            if start_sources:
-                current = list(start_sources)[0]
-            else:
-                # Circular or all sources are referenced, start with first
-                current = list(referencing_sources)[0] if referencing_sources else None
-            
-            # Build chain order
-            visited = set()
-            while current and current not in visited:
-                source_order.append(current)
-                visited.add(current)
-                current = source_linking_map.get(current)
+        # Determine which sources are last in their chains (only these use fragmentation_depth)
+        last_sources_in_chains = set()
+        for distractor_key, chain in distractor_source_chains.items():
+            if len(chain) >= 2:
+                last_sources_in_chains.add(chain[-1])
         
-        # Add any sources not in the chain
+        # Generate sources in order (based on assigned_distractors order)
         for source_name in assigned_distractors.keys():
-            if source_name not in source_order:
-                source_order.append(source_name)
-        
-        # Generate sources in order and update linked_source_ids as we go
-        for source_name in source_order:
             distractor_list = assigned_distractors.get(source_name, [])
             if not distractor_list:
                 continue
+            
+            # Only apply fragmentation_depth to sources that are last in at least one chain
+            effective_fragmentation_depth = fragmentation_depth if source_name in last_sources_in_chains else 1
             
             if source_name == "slack":
                 slack_channels, slack_messages = generate_slack(
@@ -1705,7 +1776,7 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
                     participants=participants,
                     indirection_depth=indirection_depth,
                     min_required_source=min_required_source,
-                    fragmentation_depth=fragmentation_depth,
+                    fragmentation_depth=effective_fragmentation_depth,
                     generator_config=generator_config,
                     pattern_type="time",
                     assigned_distractors=distractor_list,
@@ -1719,12 +1790,14 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
                     # Extract actual channel_id and update distractor_linked_sources
                     actual_id = extract_source_id("slack", (slack_channels, slack_messages))
                     update_linked_source_ids("slack", actual_id)
+                    # Replace PLACEHOLDER_slack in already-generated files
+                    replace_placeholders_in_files("slack", actual_id)
             elif source_name == "jira":
                 jira_projects, jira_issues = generate_jira(
                     all_canonical_slots=slots,
                     candidate_slots=candidate_slots,
                     indirection_depth=indirection_depth,
-                    fragmentation_depth=fragmentation_depth,
+                    fragmentation_depth=effective_fragmentation_depth,
                     generator_config=generator_config,
                     assigned_distractors=distractor_list,
                     distractor_linked_sources=distractor_linked_sources
@@ -1737,12 +1810,14 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
                     # Extract actual issue_key and update distractor_linked_sources
                     actual_id = extract_source_id("jira", (jira_projects, jira_issues))
                     update_linked_source_ids("jira", actual_id)
+                    # Replace PLACEHOLDER_jira in already-generated files
+                    replace_placeholders_in_files("jira", actual_id)
             elif source_name == "drive":
                 drive_folders, drive_files = generate_drive(
                     all_canonical_slots=slots,
                     candidate_slots=candidate_slots,
                     indirection_depth=indirection_depth,
-                    fragmentation_depth=fragmentation_depth,
+                    fragmentation_depth=effective_fragmentation_depth,
                     generator_config=generator_config,
                     excluded_slots=set(),
                     assigned_distractors=distractor_list,
@@ -1756,13 +1831,15 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
                     # Extract actual file_id or file name and update distractor_linked_sources
                     actual_id = extract_source_id("drive", (drive_folders, drive_files))
                     update_linked_source_ids("drive", actual_id)
+                    # Replace PLACEHOLDER_drive in already-generated files
+                    replace_placeholders_in_files("drive", actual_id)
             elif source_name == "gmail":
                 gmail_threads = generate_gmail(
                     all_canonical_slots=slots,
                     candidate_slots=candidate_slots,
                     participants=participants,
                     indirection_depth=indirection_depth,
-                    fragmentation_depth=fragmentation_depth,
+                    fragmentation_depth=effective_fragmentation_depth,
                     generator_config=generator_config,
                     excluded_slots=set(),
                     assigned_distractors=distractor_list,
@@ -1776,124 +1853,8 @@ def generate_planning_source_data(task: Task, output_dir: Path) -> Tuple[Dict[st
                     # Extract actual thread_id and update distractor_linked_sources
                     actual_id = extract_source_id("gmail", gmail_threads)
                     update_linked_source_ids("gmail", actual_id)
-    
-    elif indirection_depth >= 3:
-        # ============================================================
-        # indirection_depth>=3: 3+ sources combination needed
-        # ============================================================
-        # Each distractor gets a random linked_source (Option B)
-        
-        # Determine source generation order based on source_linking_map chain
-        # Generate sources in chain order: A → B → C
-        source_order = []
-        if source_linking_map:
-            # Find the source that is referenced but doesn't reference anyone (start of chain)
-            referenced_sources = set(source_linking_map.values())
-            referencing_sources = set(source_linking_map.keys())
-            # Start with source that references another but is not referenced
-            start_sources = referencing_sources - referenced_sources
-            if start_sources:
-                current = list(start_sources)[0]
-            else:
-                # Circular chain, start with first
-                current = list(referencing_sources)[0] if referencing_sources else None
-            
-            # Build chain order
-            visited = set()
-            while current and current not in visited:
-                source_order.append(current)
-                visited.add(current)
-                current = source_linking_map.get(current)
-        
-        # Add any sources not in the chain
-        for source_name in assigned_distractors.keys():
-            if source_name not in source_order:
-                source_order.append(source_name)
-        
-        # Generate sources in order and update linked_source_ids as we go
-        for source_name in source_order:
-            distractor_list = assigned_distractors.get(source_name, [])
-            if not distractor_list:
-                continue
-            
-            if source_name == "slack":
-                slack_channels, slack_messages = generate_slack(
-                    all_canonical_slots=slots,
-                    candidate_slots=candidate_slots,
-                    participants=participants,
-                    indirection_depth=indirection_depth,
-                    min_required_source=min_required_source,
-                    fragmentation_depth=fragmentation_depth,
-                    generator_config=generator_config,
-                    pattern_type="time",
-                    assigned_distractors=distractor_list,
-                    distractor_linked_sources=distractor_linked_sources
-                )
-                if slack_messages:
-                    slack_path = output_dir / "slack.json"
-                    with open(slack_path, 'w', encoding='utf-8') as f:
-                        json.dump({"channels": slack_channels, "messages": slack_messages}, f, indent=2)
-                    source_data["slack"] = slack_path
-                    # Extract actual channel_id and update distractor_linked_sources
-                    actual_id = extract_source_id("slack", (slack_channels, slack_messages))
-                    update_linked_source_ids("slack", actual_id)
-            elif source_name == "jira":
-                jira_projects, jira_issues = generate_jira(
-                    all_canonical_slots=slots,
-                    candidate_slots=candidate_slots,
-                    indirection_depth=indirection_depth,
-                    fragmentation_depth=fragmentation_depth,
-                    generator_config=generator_config,
-                    assigned_distractors=distractor_list,
-                    distractor_linked_sources=distractor_linked_sources
-                )
-                if jira_issues:
-                    jira_path = output_dir / "jira.json"
-                    with open(jira_path, 'w', encoding='utf-8') as f:
-                        json.dump({"projects": jira_projects, "issues": jira_issues}, f, indent=2)
-                    source_data["jira"] = jira_path
-                    # Extract actual issue_key and update distractor_linked_sources
-                    actual_id = extract_source_id("jira", (jira_projects, jira_issues))
-                    update_linked_source_ids("jira", actual_id)
-            elif source_name == "drive":
-                drive_folders, drive_files = generate_drive(
-                    all_canonical_slots=slots,
-                    candidate_slots=candidate_slots,
-                    indirection_depth=indirection_depth,
-                    fragmentation_depth=fragmentation_depth,
-                    generator_config=generator_config,
-                    excluded_slots=set(),
-                    assigned_distractors=distractor_list,
-                    distractor_linked_sources=distractor_linked_sources
-                )
-                if drive_files:
-                    drive_path = output_dir / "drive.json"
-                    with open(drive_path, 'w', encoding='utf-8') as f:
-                        json.dump({"folders": drive_folders, "files": drive_files}, f, indent=2)
-                    source_data["drive"] = drive_path
-                    # Extract actual file_id or file name and update distractor_linked_sources
-                    actual_id = extract_source_id("drive", (drive_folders, drive_files))
-                    update_linked_source_ids("drive", actual_id)
-            elif source_name == "gmail":
-                gmail_threads = generate_gmail(
-                    all_canonical_slots=slots,
-                    candidate_slots=candidate_slots,
-                    participants=participants,
-                    indirection_depth=indirection_depth,
-                    fragmentation_depth=fragmentation_depth,
-                    generator_config=generator_config,
-                    excluded_slots=set(),
-                    assigned_distractors=distractor_list,
-                    distractor_linked_sources=distractor_linked_sources
-                )
-                if gmail_threads:
-                    gmail_path = output_dir / "gmail.json"
-                    with open(gmail_path, 'w', encoding='utf-8') as f:
-                        json.dump({"threads": gmail_threads}, f, indent=2)
-                    source_data["gmail"] = gmail_path
-                    # Extract actual thread_id and update distractor_linked_sources
-                    actual_id = extract_source_id("gmail", gmail_threads)
-                    update_linked_source_ids("gmail", actual_id)
+                    # Replace PLACEHOLDER_gmail in already-generated files
+                    replace_placeholders_in_files("gmail", actual_id)
     
     # Collect token usage
     token_usage = {
