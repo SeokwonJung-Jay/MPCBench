@@ -1,85 +1,114 @@
 # MPCBench
 
-**A benchmark for measuring an agent/LLM's ability to compose personal context across multiple internal sources to complete real tasks.**
+MPCBench is a benchmark for measuring an agent/LLM's ability to compose personal context across multiple internal sources to complete real tasks.
 
-## 🎯 Key Question
+## Key question
 
-> "How can we measure and improve an agent/LLM's ability to compose personal context to complete real tasks?"
+"How can we measure and improve an agent/LLM's ability to compose personal context to complete real tasks?"
 
 MPCBench prioritizes:
-1.  **Improving outcomes** for the same task (accuracy, constraint adherence, success rate).
-2.  **Enabling end-to-end completion** of tasks that become feasible *only* with personal-context composition.
 
----
+- Improving outcomes for the same task (accuracy, constraint adherence, success rate, etc.)
 
-## 🧠 What MPCBench Evaluates
+- Enabling end-to-end completion of tasks that become feasible only with personal-context composition
 
-Each task requires the agent to complete a scheduling problem by demonstrating three distinct capabilities:
+## What MPCBench evaluates
 
-### 1. Decomposition
-**Breaking requirements into information needs.**
-The agent must determine *which* internal records (calendars, policies, emails) are needed to satisfy the abstract user request.
+Each task requires the agent to complete a scheduling problem by performing three capabilities:
 
-### 2. Information Acquisition
-**Retrieving required information via tool calls.**
-The agent must actively navigate multiple sources to fetch data. It is not "fed" the context; it must go out and get it.
+1) Decomposition: break requirements into information needs (which internal records are needed)
 
-### 3. Integration
-**Combining heterogeneous formats and contexts.**
-The agent must synthesize data from different formats (JSON, Text, Tables) to generate, filter, and rank final candidates. All constraints are treated as **Hard Constraints** (violations remove a candidate).
+2) Information acquisition: retrieve required information via tool calls from multiple sources
 
----
+3) Integration: combine heterogeneous formats/contexts to generate, filter, and rank final candidates
 
-## 📅 Task Family: Scheduling
+All constraints are treated as hard constraints (violations remove a candidate).
 
-The common objective is to **propose N meeting candidates within a given time window.**
+## Task family (scheduling)
 
-### Data Sources
-* **Calendar:** Busy intervals (JSON).
-* **Organization Policy:**
-    * Easy: JSON format.
-    * Hard: Long text + machine-readable tags.
-* **Communication Threads:**
-    * Slack-like text + machine-readable tags for deadlines/bans.
-    * Hardest level includes required participants, duration, N count, and tie-break rules.
-* **People Directory & Room System:** (Hardest level) Requires joining Name → ID and Room Metadata → Availability JSON.
+Common objective: propose N meeting candidates within a given time window.
 
-**Note:** Candidates are generated on a **15-minute grid** to allow deterministic oracle computation.
+Data sources may include:
 
----
+- Calendar busy intervals (JSON)
 
-## 📊 Difficulty Levels
+- Organization policy (JSON in easy; long text + machine-readable tags in harder levels)
 
-| Level | Complexity | Data Sources | Key Challenge |
-| :--- | :--- | :--- | :--- |
-| **Level 1**<br>(Easy) | **Explicit Sources** | • Calendar<br>• Policy (JSON) | Basic constraint satisfaction with structured data. |
-| **Level 2**<br>(Mid) | **Implicit Sources** | • Calendar<br>• Policy (Text+Tags)<br>• Threads (Text+Tags) | **Decomposition:** Task text does not name sources. Agent must deduce where to look. |
-| **Level 3**<br>(Hard) | **Cross-Tool Joins** | • All of Level 2<br>• People Directory<br>• Room System | **Integration:** Requires cross-tool joins (People/Rooms) and deterministic ranking (Earliest-first). |
+- Communication threads (Slack-like text + machine-readable tags for deadlines/bans; and in the hardest level also required participants, duration, N, and tie-break rules)
 
----
+- (Hardest level) people directory (name → id join) and room system (room metadata table + availability JSON requiring joins)
 
-## 🔮 Oracle-Based Labeling & Evaluation
+Candidates are generated on a 15-minute grid to allow deterministic oracle computation.
 
-MPCBench uses an oracle to produce the gold answer deterministically.
+## Difficulty levels (numeric)
 
-### The Oracle Pipeline
-1.  **Tag-Based Processing:** The oracle never parses natural language. It uses machine-readable tags embedded in unstructured sources.
-2.  **Pipeline Steps:** Candidate Generation → Constraint Filtering → (L3) Room Join → Deterministic Sorting → Top-N Selection.
-3.  **Quality Control:** Instances with fewer than N feasible candidates are discarded and resampled during generation.
+- Level 1 (easy): Calendar + Policy (policy is JSON; sources are explicit)
 
-### Evaluation Metric
-* **F1 Overlap:** Compare model output candidates against Oracle Top-N candidates.
-* **Rationales:** The benchmark supports storing rationales, though they are qualitative (not scored yet).
+- Level 2 (mid): Calendar + Policy (long text + tags) + Communication threads (text + tags); task text does not name sources (only indicates multiple internal sources)
 
----
+- Level 3 (hard): Level 2 + People directory + Room system; task text provides no hints about sources; cross-tool joins are required; ranking is earliest-first with deterministic tie-break (e.g., room_id ascending)
 
-## 📂 Repository Structure
+## Level Design Matrix
 
-```text
-.
-├── schema/         # Unified JSON schemas for World, Instance, and Oracle
-├── generate/       # World + Instance generation (with discard/resample loop)
-├── oracle/         # Deterministic oracle engine for gold label generation
-├── evaluation/     # Parsing + Scoring (F1)
-└── archive/        # Legacy MPCBench implementation (Read-only)
-```
+### Decomposition
+
+| Aspect | Level 1 | Level 2 | Level 3 |
+|--------|---------|---------|---------|
+| Sources | 1-2 | 3 | 4+ |
+| Source hints in task | All sources named | # of sources told | No hints |
+| Requirement-to-source mapping | 1:1 | 1:1 | Some mapped to several sources |
+| Requirement independence | Independent | Independent | Some dependent |
+
+### Information Acquisition
+
+| Aspect | Level 1 | Level 2 | Level 3 |
+|--------|---------|---------|---------|
+| APIs provided | Few | Some unnecessary APIs | Many similar tools |
+| Retrieval steps | 1-2 | 3-4 | 5+ |
+| Parameters | Keyword/date only | Same | Same |
+| API result quality | Clean, single item | Multiple items, long text noise | Cross-tool joins required, more noise |
+
+### Integration
+
+| Aspect | Level 1 | Level 2 | Level 3 |
+|--------|---------|---------|---------|
+| Output formats | Similar (JSON) | 1-2 different (JSON + text) | 3+ different (JSON + text + table) |
+| Context types | Single (availability) | 1-2 (availability + policy) | 3+ (availability + policy + room + capacity) |
+
+## Oracle-based labeling and evaluation
+
+MPCBench uses an oracle to produce the gold answer deterministically:
+
+- The oracle never parses natural language. Any unstructured text sources include machine-readable tags.
+
+- Pipeline: candidate generation → constraint filtering → (level 3) room join → deterministic sorting → top-N selection
+
+- Instances with fewer than N feasible candidates after filtering are discarded and resampled.
+
+Evaluation (current):
+
+- Compare model output candidates against oracle top-N candidates using F1 overlap.
+
+- The benchmark may store rationales/explanations, but they are not scored yet.
+
+## Data artifacts
+
+Recommended structure:
+
+- `worlds/`: `world_level1.json`, `world_level2.json`, `world_level3.json` (one fixed world per level)
+
+- `instances/`: `instances_level1.jsonl`, `instances_level2.jsonl`, `instances_level3.jsonl` (many instances per level)
+
+- `oracles/`: `oracle_level1.jsonl`, `oracle_level2.jsonl`, `oracle_level3.jsonl` (oracle labels; join by instance_id)
+
+## Repo structure
+
+- `schema/`: JSON schemas for world/instance/oracle (single unified schema per concept; level handled inside)
+
+- `generate/`: world + instance generation (with discard/resample loop)
+
+- `oracle/`: deterministic oracle engine
+
+- `evaluation/`: parsing + scoring (F1)
+
+- `archive/`: legacy MPCBench implementation (read-only; never modify)
