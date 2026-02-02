@@ -50,30 +50,11 @@ Candidates are generated on a 15-minute grid to allow deterministic oracle compu
 
 ## Level Design Matrix
 
-### Decomposition
-
-| Aspect | Level 1 | Level 2 | Level 3 |
-|--------|---------|---------|---------|
-| Sources | 1-2 | 3 | 4+ |
-| Source hints in task | All sources named | # of sources told | No hints |
-| Requirement-to-source mapping | 1:1 | 1:1 | Some mapped to several sources |
-| Requirement independence | Independent | Independent | Some dependent |
-
-### Information Acquisition
-
-| Aspect | Level 1 | Level 2 | Level 3 |
-|--------|---------|---------|---------|
-| APIs provided | Few | Some unnecessary APIs | Many similar tools |
-| Retrieval steps | 1-2 | 3-4 | 5+ |
-| Parameters | Keyword/date only | Same | Same |
-| API result quality | Clean, single item | Multiple items, long text noise | Cross-tool joins required, more noise |
-
-### Integration
-
-| Aspect | Level 1 | Level 2 | Level 3 |
-|--------|---------|---------|---------|
-| Output formats | Similar (JSON) | 1-2 different (JSON + text) | 3+ different (JSON + text + table) |
-| Context types | Single (availability) | 1-2 (availability + policy) | 3+ (availability + policy + room + capacity) |
+| Dimension | Level 1 | Level 2 | Level 3 |
+|-----------|---------|---------|---------|
+| **Decomposition** | - 1-2 sources and requirements<br>- All sources are named in the task<br>- Each requirement is mapped into 1 source<br>- Each requirement is independent | - 3 sources and 1-2 requirements<br>- # of sources are told<br>- Each requirement is mapped into 1 source<br>- Each requirement is independent | - 4+ sources and 3+ requirements<br>- No hints for source usage<br>- Some requirements are mapped into several sources<br>- Some requirements are dependent |
+| **Information Acquisition** | - Only a few APIs provided<br>- Requires 1-2 retrieval steps<br>- No parameters beyond keyword and date<br>- API returns a clean, single relevant item | - Some unnecessary APIs are provided<br>- Requires 3-4 retrieval steps<br>- API result may contain multiple items or long texts as noise | - Many APIs with multiple similar tools<br>- Requires 5+ retrieval steps<br>- Requires cross-tool joins and multi-step retrieval<br>- More noise |
+| **Integration** | - All outputs have similar structure (JSON)<br>- All outputs have similar context (availability only) | - 1-2 different formats (JSON + text)<br>- 1-2 different contexts (availability + policy) | - 3+ different formats (JSON + text + table)<br>- 3+ different contexts (availability + policy + room + capacity) |
 
 ## Oracle-based labeling and evaluation
 
