@@ -32,13 +32,42 @@ Systemic constraints:
 
 Information gathering:
 - You must use the provided tools to actively query information you need. Initially, only the Task is provided, so you should search for relevant IDs or text to collect information before performing scheduling.
+- For Level 2/3 tasks: You MUST read the communication threads (use list_thread_ids, then read_communication_thread) to discover the actual task requirements (time window, duration, number of options, policy to follow, etc.).
 
 **IMPORTANT: Chain-of-Thought Required**
 Before providing the final JSON output, you MUST explain your reasoning process step-by-step:
 1. List the constraints you identified (time windows, excluded times, required duration, etc.).
 2. Explain how you filtered the candidates (e.g., which slots were eliminated and why).
 3. Explain why you selected specific time slots or rooms (if applicable).
-4. Finally, provide the JSON object wrapped in ```json ... ``` block."""
+4. Finally, provide the JSON object wrapped in ```json ... ``` block.
+
+**OUTPUT FORMAT (Strict JSON):**
+
+[CRITICAL FOR LEVEL 3 - ROOM ASSIGNMENT]
+If the task involves finding/assigning a room (Level 3), every candidate object MUST include the "room_id" field.
+Sorting criteria typically: earliest start → earliest end → smallest room_id.
+When providing N candidates, prefer DIFFERENT ROOMS at the same time slot over same room at different times.
+
+Example JSON output for Level 1/2 (no room):
+```json
+{
+  "candidates": [
+    {"start": "2026-01-20T09:00:00+09:00", "end": "2026-01-20T10:00:00+09:00"},
+    {"start": "2026-01-20T09:15:00+09:00", "end": "2026-01-20T10:15:00+09:00"}
+  ]
+}
+```
+
+Example JSON output for Level 3 (with room - REQUIRED):
+```json
+{
+  "candidates": [
+    {"start": "2026-01-20T09:00:00+09:00", "end": "2026-01-20T10:00:00+09:00", "room_id": "room_001"},
+    {"start": "2026-01-20T09:00:00+09:00", "end": "2026-01-20T10:00:00+09:00", "room_id": "room_002"},
+    {"start": "2026-01-20T09:00:00+09:00", "end": "2026-01-20T10:00:00+09:00", "room_id": "room_003"}
+  ]
+}
+```"""
 
     def __init__(
         self,
