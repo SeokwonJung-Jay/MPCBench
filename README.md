@@ -72,15 +72,15 @@ Evaluation (current):
 
 - The benchmark may store rationales/explanations, but they are not scored yet.
 
-## Evaluation Results (exp1/exp2, gpt-4o)
+## Evaluation Results (gpt-4o)
 
 ### Summary
 
-| Level | F1 Score | Exact Match | Experiment |
-|-------|----------|-------------|------------|
-| L1 | 0.90 | 4/5 | exp1 |
-| L2 | 0.80 | 4/5 | exp2 |
-| L3 | 0.33 | 1/5 | exp2 |
+| Level | F1 Score | Exact Match |
+|-------|----------|-------------|
+| L1 | 0.90 | 4/5 |
+| L2 | 0.80 | 4/5 |
+| L3 | 0.33 | 1/5 |
 
 ### Failure Analysis
 
