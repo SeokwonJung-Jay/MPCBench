@@ -53,7 +53,7 @@ archive/
 # These are generated artifacts from world_state_generator and run_generation
 data/
 evaluation/logs/
-logs/
+# logs/
 
 # Generation tools (one-time use scripts)
 generation_tools/
@@ -88,3 +88,5 @@ CODE_READING_GUIDE.md
 LLM_GENERATION_EXPLANATION.md
 REFACTORING_PLAN.md
 
+# Cursor files
+.cursor/

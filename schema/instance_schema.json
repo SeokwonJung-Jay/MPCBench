@@ -1,0 +1,254 @@
+{
+  "required": ["instance_id", "level", "task_text", "slots", "sources_ref"],
+  "properties": {
+    "instance_id": {
+      "type": "string",
+      "title": "Instance ID",
+      "description": "Unique identifier for this task instance"
+    },
+    "level": {
+      "type": "integer",
+      "enum": [1, 2, 3],
+      "title": "Difficulty Level",
+      "description": "Difficulty level: 1 (easy), 2 (mid), 3 (hard)"
+    },
+    "task_text": {
+      "type": "string",
+      "title": "Task Text",
+      "description": "Natural language description of the scheduling task"
+    },
+    "slots": {
+      "type": "object",
+      "title": "Slot Constraints",
+      "description": "Constraints and requirements for the scheduling task",
+      "required": ["time_window"],
+      "properties": {
+        "time_window": {
+          "$ref": "#/$defs/time_window",
+          "title": "Time Window"
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Participants (Level 1/2)",
+          "description": "Array of participant names (used in level 1/2)"
+        },
+        "participant_pool": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Participant Pool (Level 3)",
+          "description": "Array of participant names to select from (used in level 3)"
+        },
+        "duration_min": {
+          "type": "integer",
+          "enum": [15, 30, 60],
+          "title": "Duration (Level 1/2)",
+          "description": "Meeting duration in minutes (used in level 1/2)"
+        },
+        "num_options": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "title": "Number of Options (Level 1/2)",
+          "description": "Number of candidate slots to propose (used in level 1/2)"
+        },
+        "policy_id": {
+          "type": "string",
+          "enum": ["POLICY_1", "POLICY_2", "POLICY_3", "POLICY_4"],
+          "title": "Policy ID (Level 1)",
+          "description": "Policy identifier to use (level 1 only)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sources_ref": {
+      "type": "object",
+      "title": "Source References",
+      "description": "References to world data and specific documents/threads",
+      "required": ["world_id"],
+      "properties": {
+        "world_id": {
+          "type": "string",
+          "title": "World ID",
+          "description": "Reference to the world this instance belongs to"
+        },
+        "policy_doc_id": {
+          "type": "string",
+          "title": "Policy Document ID (Level 2/3)",
+          "description": "Reference to specific policy document (level 2/3)"
+        },
+        "comm_thread_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Communication Thread IDs (Level 2/3)",
+          "description": "Array of communication thread IDs to reference (level 2/3)"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "level": {
+          "const": 1
+        }
+      },
+      "allOf": [
+        {
+          "properties": {
+            "slots": {
+              "required": [
+                "time_window",
+                "participants",
+                "duration_min",
+                "num_options",
+                "policy_id"
+              ],
+              "properties": {
+                "participants": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              }
+            },
+            "sources_ref": {
+              "not": {
+                "anyOf": [
+                  { "required": ["policy_doc_id"] },
+                  { "required": ["comm_thread_ids"] }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "properties": {
+        "level": {
+          "const": 2
+        }
+      },
+      "allOf": [
+        {
+          "properties": {
+            "slots": {
+              "required": [
+                "time_window",
+                "participants",
+                "duration_min",
+                "num_options"
+              ],
+              "properties": {
+                "participants": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              },
+              "not": {
+                "required": [
+                  "policy_id"
+                ]
+              }
+            },
+            "sources_ref": {
+              "required": [
+                "world_id",
+                "policy_doc_id",
+                "comm_thread_ids"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "properties": {
+        "level": {
+          "const": 3
+        }
+      },
+      "allOf": [
+        {
+          "properties": {
+            "slots": {
+              "required": [
+                "time_window",
+                "participant_pool"
+              ],
+              "properties": {
+                "participant_pool": {
+                  "type": "array",
+                  "minItems": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "participants"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "duration_min"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "num_options"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "policy_id"
+                    ]
+                  }
+                ]
+              }
+            },
+            "sources_ref": {
+              "required": [
+                "world_id",
+                "policy_doc_id",
+                "comm_thread_ids"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "datetime": {
+      "type": "string",
+      "format": "date-time",
+      "title": "ISO-8601 DateTime",
+      "description": "ISO-8601 datetime string (e.g., '2026-01-19T13:00:00')"
+    },
+    "time_window": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/datetime",
+          "title": "Window Start"
+        },
+        "end": {
+          "$ref": "#/$defs/datetime",
+          "title": "Window End"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

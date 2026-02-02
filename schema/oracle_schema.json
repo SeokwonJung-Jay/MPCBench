@@ -1,0 +1,117 @@
+{
+  "required": ["instance_id", "feasible_candidates", "explanation_keys"],
+  "properties": {
+    "instance_id": {
+      "type": "string",
+      "title": "Instance ID",
+      "description": "Unique identifier for the task instance this oracle label corresponds to"
+    },
+    "feasible_candidates": {
+      "type": "array",
+      "title": "Feasible Candidates",
+      "description": "Array of feasible meeting slot candidates, sorted by deterministic ranking (earliest-first with tie-break rules)",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Candidate (Level 1/2)",
+            "description": "Time slot candidate for level 1/2",
+            "required": ["start", "end"],
+            "properties": {
+              "start": {
+                "$ref": "#/$defs/datetime",
+                "title": "Start Time"
+              },
+              "end": {
+                "$ref": "#/$defs/datetime",
+                "title": "End Time"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "title": "Candidate (Level 3)",
+            "description": "Time slot candidate with room assignment for level 3",
+            "required": ["start", "end", "room_id"],
+            "properties": {
+              "start": {
+                "$ref": "#/$defs/datetime",
+                "title": "Start Time"
+              },
+              "end": {
+                "$ref": "#/$defs/datetime",
+                "title": "End Time"
+              },
+              "room_id": {
+                "type": "string",
+                "title": "Room ID",
+                "description": "Assigned room identifier"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "explanation_keys": {
+      "type": "array",
+      "title": "Explanation Keys",
+      "description": "Array of keys identifying which data sources and fields were used in the oracle computation",
+      "items": {
+        "type": "object",
+        "required": ["source", "key"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Data source identifier (e.g., 'calendar_json', 'policy_text', 'comm_threads')"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "Specific key or identifier within the source (e.g., person_id, doc_id, thread_id)"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "description": "Optional explanatory note about how this key was used"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "meta": {
+      "type": "object",
+      "title": "Metadata",
+      "description": "Optional metadata about oracle computation",
+      "properties": {
+        "discarded": {
+          "type": "boolean",
+          "title": "Discarded",
+          "description": "Whether this instance was discarded (fewer than N feasible candidates)"
+        },
+        "discard_reason": {
+          "type": "string",
+          "title": "Discard Reason",
+          "description": "Reason for discarding this instance if applicable"
+        },
+        "generated_at": {
+          "$ref": "#/$defs/datetime",
+          "title": "Generated At",
+          "description": "Timestamp when the oracle label was generated"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "datetime": {
+      "type": "string",
+      "format": "date-time",
+      "title": "ISO-8601 DateTime",
+      "description": "ISO-8601 datetime string (e.g., '2026-01-19T13:00:00')"
+    }
+  }
+}
