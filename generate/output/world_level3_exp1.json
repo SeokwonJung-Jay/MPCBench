@@ -1,0 +1,448 @@
+{
+  "world_id": "world_level3_exp1",
+  "level": 3,
+  "timezone": "Asia/Seoul",
+  "world_start": "2026-01-19T00:00:00+09:00",
+  "world_end": "2026-01-23T23:59:59+09:00",
+  "sources": {
+    "calendar_json": {
+      "person_001": [
+        {
+          "start": "2026-01-19T10:00:00+09:00",
+          "end": "2026-01-19T11:00:00+09:00",
+          "title": "Team Standup"
+        },
+        {
+          "start": "2026-01-20T14:00:00+09:00",
+          "end": "2026-01-20T15:30:00+09:00",
+          "title": "Design Review"
+        },
+        {
+          "start": "2026-01-22T09:00:00+09:00",
+          "end": "2026-01-22T10:00:00+09:00",
+          "title": "Client Call"
+        }
+      ],
+      "person_002": [
+        {
+          "start": "2026-01-19T13:00:00+09:00",
+          "end": "2026-01-19T14:00:00+09:00",
+          "title": "Lunch Meeting"
+        },
+        {
+          "start": "2026-01-20T11:30:00+09:00",
+          "end": "2026-01-20T12:00:00+09:00",
+          "title": "Quick Sync"
+        },
+        {
+          "start": "2026-01-21T15:00:00+09:00",
+          "end": "2026-01-21T16:00:00+09:00",
+          "title": "Project Review"
+        }
+      ],
+      "person_003": [
+        {
+          "start": "2026-01-19T15:00:00+09:00",
+          "end": "2026-01-19T16:00:00+09:00",
+          "title": "Code Review"
+        },
+        {
+          "start": "2026-01-20T10:00:00+09:00",
+          "end": "2026-01-20T11:00:00+09:00",
+          "title": "Sprint Planning"
+        },
+        {
+          "start": "2026-01-21T10:00:00+09:00",
+          "end": "2026-01-21T10:15:00+09:00",
+          "title": "Quick Check"
+        },
+        {
+          "start": "2026-01-23T14:00:00+09:00",
+          "end": "2026-01-23T15:00:00+09:00",
+          "title": "Team Retro"
+        }
+      ],
+      "person_004": [
+        {
+          "start": "2026-01-20T09:00:00+09:00",
+          "end": "2026-01-20T10:00:00+09:00",
+          "title": "Morning Sync"
+        },
+        {
+          "start": "2026-01-21T13:00:00+09:00",
+          "end": "2026-01-21T14:00:00+09:00",
+          "title": "Lunch Meeting"
+        }
+      ],
+      "person_005": [
+        {
+          "start": "2026-01-19T11:00:00+09:00",
+          "end": "2026-01-19T12:00:00+09:00",
+          "title": "Client Demo"
+        },
+        {
+          "start": "2026-01-22T14:00:00+09:00",
+          "end": "2026-01-22T15:00:00+09:00",
+          "title": "Architecture Review"
+        },
+        {
+          "start": "2026-01-23T10:00:00+09:00",
+          "end": "2026-01-23T11:00:00+09:00",
+          "title": "Product Review"
+        }
+      ],
+      "person_006": [
+        {
+          "start": "2026-01-19T14:00:00+09:00",
+          "end": "2026-01-19T15:00:00+09:00",
+          "title": "Training Session"
+        },
+        {
+          "start": "2026-01-21T11:00:00+09:00",
+          "end": "2026-01-21T12:00:00+09:00",
+          "title": "Workshop"
+        }
+      ],
+      "person_007": [
+        {
+          "start": "2026-01-20T13:00:00+09:00",
+          "end": "2026-01-20T14:00:00+09:00",
+          "title": "Lunch Meeting"
+        },
+        {
+          "start": "2026-01-22T11:00:00+09:00",
+          "end": "2026-01-22T12:00:00+09:00",
+          "title": "Team Sync"
+        }
+      ],
+      "person_008": [
+        {
+          "start": "2026-01-19T09:00:00+09:00",
+          "end": "2026-01-19T10:00:00+09:00",
+          "title": "Daily Standup"
+        },
+        {
+          "start": "2026-01-21T14:00:00+09:00",
+          "end": "2026-01-21T15:00:00+09:00",
+          "title": "Design Discussion"
+        }
+      ],
+      "person_009": [
+        {
+          "start": "2026-01-20T15:00:00+09:00",
+          "end": "2026-01-20T16:00:00+09:00",
+          "title": "Code Review"
+        },
+        {
+          "start": "2026-01-23T13:00:00+09:00",
+          "end": "2026-01-23T14:00:00+09:00",
+          "title": "Lunch Meeting"
+        }
+      ],
+      "person_010": [
+        {
+          "start": "2026-01-19T12:00:00+09:00",
+          "end": "2026-01-19T13:00:00+09:00",
+          "title": "Lunch Meeting"
+        },
+        {
+          "start": "2026-01-22T10:00:00+09:00",
+          "end": "2026-01-22T11:00:00+09:00",
+          "title": "Client Call"
+        }
+      ]
+    },
+    "policy_text": "COMPANY MEETING POLICY DOCUMENT v3.1 - FINAL DRAFT\n\nThis is the official meeting policy document. Actually, wait, I think there was a revision last month. Let me check the version history... No, this is definitely the latest. Or is it?\n\nSection 1: Standard Work Hours\nAll meetings must be scheduled during standard business hours. The standard hours are 9:00 AM to 6:00 PM, Monday through Friday. Actually, I think some departments use 8:30 AM to 5:30 PM, but the official policy is 9 to 6. Or maybe it's 9:30? Let me verify with HR... Actually, the system configuration says 9 AM to 6 PM, so that's what we'll use.\n\nSection 2: Lunch Break Policy\nLunch breaks are from 12:00 PM to 1:00 PM daily. No meetings should be scheduled during this time. Some teams have flexible lunch hours from 11:30 to 12:30, but the corporate standard is 12 to 1. I think.\n\nSection 3: Buffer Requirements\nThere must be a minimum buffer time between consecutive meetings. The system requires a 10-minute buffer. Or is it 15 minutes? Let me check... Actually, the handbook says 10 minutes minimum. Yes, 10 minutes.\n\nSection 4: Restricted Time Windows\nMonday mornings from 9:00 AM to 12:00 PM are restricted for all-hands meetings. Friday afternoons from 1:00 PM to 6:00 PM are also restricted. Wait, is that correct? Let me double-check the calendar... Yes, Monday 9-12 and Friday 1-6 are restricted periods.\n\nNote: This policy supersedes all previous versions. Please refer to the latest update. Actually, I'm not entirely sure if this is the latest version. Someone should verify this with the compliance team.\n\nAdditional Note: Some sections may be outdated. Please confirm with your manager before scheduling critical meetings.\n\nEND OF POLICY DOCUMENT",
+    "policy_tags": {
+      "POLICY_1": {
+        "rules": [
+          {
+            "type": "work_hours",
+            "start": "09:00",
+            "end": "18:00",
+            "days_of_week": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        ]
+      },
+      "POLICY_2": {
+        "rules": [
+          {
+            "type": "lunch_block",
+            "start": "12:00",
+            "end": "13:00",
+            "days_of_week": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        ]
+      },
+      "POLICY_3": {
+        "rules": [
+          {
+            "type": "buffer_min",
+            "minutes": 10
+          }
+        ]
+      },
+      "POLICY_4": {
+        "rules": [
+          {
+            "type": "ban_dow_time",
+            "day_of_week": 0,
+            "start": "09:00",
+            "end": "12:00"
+          },
+          {
+            "type": "ban_dow_time",
+            "day_of_week": 4,
+            "start": "13:00",
+            "end": "18:00"
+          }
+        ]
+      }
+    },
+    "people_table": {
+      "primary_key": "person_id",
+      "columns": [
+        "person_id",
+        "person_name",
+        "team",
+        "email",
+        "notes"
+      ],
+      "rows": [
+        {
+          "person_id": "person_001",
+          "person_name": "Alice",
+          "team": "Engineering",
+          "email": "alice@company.com",
+          "notes": "Senior Engineer"
+        },
+        {
+          "person_id": "person_002",
+          "person_name": "Bob",
+          "team": "Product",
+          "email": "bob@company.com",
+          "notes": "Product Manager"
+        },
+        {
+          "person_id": "person_003",
+          "person_name": "Charlie",
+          "team": "Engineering",
+          "email": "charlie@company.com",
+          "notes": "Tech Lead"
+        },
+        {
+          "person_id": "person_004",
+          "person_name": "Diana",
+          "team": "Design",
+          "email": "diana@company.com",
+          "notes": "UX Designer"
+        },
+        {
+          "person_id": "person_005",
+          "person_name": "Eve",
+          "team": "Engineering",
+          "email": "eve@company.com",
+          "notes": "Backend Engineer"
+        },
+        {
+          "person_id": "person_006",
+          "person_name": "Frank",
+          "team": "Marketing",
+          "email": "frank@company.com",
+          "notes": "Marketing Lead"
+        },
+        {
+          "person_id": "person_007",
+          "person_name": "Grace",
+          "team": "Sales",
+          "email": "grace@company.com",
+          "notes": "Sales Manager"
+        },
+        {
+          "person_id": "person_008",
+          "person_name": "Henry",
+          "team": "Engineering",
+          "email": "henry@company.com",
+          "notes": "Frontend Engineer"
+        },
+        {
+          "person_id": "person_009",
+          "person_name": "Iris",
+          "team": "Product",
+          "email": "iris@company.com",
+          "notes": "Product Designer"
+        },
+        {
+          "person_id": "person_010",
+          "person_name": "Jack",
+          "team": "Operations",
+          "email": "jack@company.com",
+          "notes": "Ops Manager"
+        }
+      ],
+      "meta": {
+        "version": "1.0",
+        "last_updated": "2026-01-01"
+      }
+    },
+    "rooms_table": {
+      "primary_key": "room_id",
+      "columns": [
+        "room_id",
+        "capacity",
+        "floor",
+        "equipment",
+        "notes"
+      ],
+      "rows": [
+        {
+          "room_id": "room_001",
+          "capacity": 2,
+          "floor": "1",
+          "equipment": "whiteboard",
+          "notes": "Small meeting room"
+        },
+        {
+          "room_id": "room_002",
+          "capacity": 4,
+          "floor": "1",
+          "equipment": "projector",
+          "notes": "Medium room"
+        },
+        {
+          "room_id": "room_003",
+          "capacity": 6,
+          "floor": "2",
+          "equipment": "whiteboard,projector",
+          "notes": "Large room"
+        },
+        {
+          "room_id": "room_004",
+          "capacity": 8,
+          "floor": "2",
+          "equipment": "video_conference",
+          "notes": "Conference room"
+        },
+        {
+          "room_id": "room_005",
+          "capacity": 10,
+          "floor": "3",
+          "equipment": "projector,video_conference",
+          "notes": "Executive room"
+        },
+        {
+          "room_id": "room_006",
+          "capacity": 12,
+          "floor": "3",
+          "equipment": "whiteboard,projector,video_conference",
+          "notes": "Boardroom"
+        }
+      ],
+      "meta": {
+        "version": "1.0",
+        "last_updated": "2026-01-01"
+      }
+    },
+    "room_availability_json": {
+      "room_001": [
+        {
+          "start": "2026-01-19T10:00:00+09:00",
+          "end": "2026-01-19T11:00:00+09:00",
+          "title": "Booked"
+        },
+        {
+          "start": "2026-01-20T14:00:00+09:00",
+          "end": "2026-01-20T15:00:00+09:00",
+          "title": "Booked"
+        }
+      ],
+      "room_002": [
+        {
+          "start": "2026-01-19T13:00:00+09:00",
+          "end": "2026-01-19T14:00:00+09:00",
+          "title": "Booked"
+        },
+        {
+          "start": "2026-01-21T15:00:00+09:00",
+          "end": "2026-01-21T16:00:00+09:00",
+          "title": "Booked"
+        }
+      ],
+      "room_003": [
+        {
+          "start": "2026-01-19T09:00:00+09:00",
+          "end": "2026-01-19T10:00:00+09:00",
+          "title": "Booked"
+        },
+        {
+          "start": "2026-01-20T11:00:00+09:00",
+          "end": "2026-01-20T12:00:00+09:00",
+          "title": "Booked"
+        },
+        {
+          "start": "2026-01-22T09:00:00+09:00",
+          "end": "2026-01-22T10:00:00+09:00",
+          "title": "Booked"
+        }
+      ],
+      "room_004": [
+        {
+          "start": "2026-01-19T11:00:00+09:00",
+          "end": "2026-01-19T12:00:00+09:00",
+          "title": "Booked"
+        },
+        {
+          "start": "2026-01-21T10:00:00+09:00",
+          "end": "2026-01-21T11:00:00+09:00",
+          "title": "Booked"
+        },
+        {
+          "start": "2026-01-23T14:00:00+09:00",
+          "end": "2026-01-23T15:00:00+09:00",
+          "title": "Booked"
+        }
+      ],
+      "room_005": [
+        {
+          "start": "2026-01-20T10:00:00+09:00",
+          "end": "2026-01-20T11:00:00+09:00",
+          "title": "Booked"
+        },
+        {
+          "start": "2026-01-22T14:00:00+09:00",
+          "end": "2026-01-22T15:00:00+09:00",
+          "title": "Booked"
+        }
+      ],
+      "room_006": [
+        {
+          "start": "2026-01-19T14:00:00+09:00",
+          "end": "2026-01-19T15:00:00+09:00",
+          "title": "Booked"
+        },
+        {
+          "start": "2026-01-21T13:00:00+09:00",
+          "end": "2026-01-21T14:00:00+09:00",
+          "title": "Booked"
+        },
+        {
+          "start": "2026-01-23T10:00:00+09:00",
+          "end": "2026-01-23T11:00:00+09:00",
+          "title": "Booked"
+        }
+      ]
+    }
+  }
+}

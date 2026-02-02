@@ -45,8 +45,14 @@ Before providing the final JSON output, you MUST explain your reasoning process 
 
 [CRITICAL FOR LEVEL 3 - ROOM ASSIGNMENT]
 If the task involves finding/assigning a room (Level 3), every candidate object MUST include the "room_id" field.
-Sorting criteria typically: earliest start → earliest end → smallest room_id.
-When providing N candidates, prefer DIFFERENT ROOMS at the same time slot over same room at different times.
+
+DEFINITION: Each "option" or "candidate" is a unique (start, end, room_id) tuple.
+When asked to provide N options:
+  1. Find the BEST available time slot first
+  2. Provide N DIFFERENT ROOMS at that same time slot
+  3. DO NOT provide N different time slots with the same room
+
+Sorting: earliest start → earliest end → smallest room_id.
 
 Example JSON output for Level 1/2 (no room):
 ```json

@@ -64,16 +64,23 @@ def parse_args() -> argparse.Namespace:
         default=0.0,
         help="Model temperature (default: 0.0)."
     )
+    parser.add_argument(
+        "--suffix",
+        type=str,
+        default="test",
+        help="Data file suffix (default: test). E.g., 'exp1' for world_level1_exp1.json"
+    )
     return parser.parse_args()
 
 
-def load_world(input_dir: str, level: int) -> Dict[str, Any]:
+def load_world(input_dir: str, level: int, suffix: str = "test") -> Dict[str, Any]:
     """
     Load world data for the given level.
     
     Args:
         input_dir: Data root directory.
         level: Task level (1, 2, or 3).
+        suffix: File suffix (default: "test").
         
     Returns:
         World dict.
@@ -81,8 +88,8 @@ def load_world(input_dir: str, level: int) -> Dict[str, Any]:
     Raises:
         FileNotFoundError: If world file does not exist.
     """
-    # Flat file structure: input_dir/world_level{level}_test.json
-    world_path = Path(input_dir) / f"world_level{level}_test.json"
+    # Flat file structure: input_dir/world_level{level}_{suffix}.json
+    world_path = Path(input_dir) / f"world_level{level}_{suffix}.json"
     
     if not world_path.exists():
         raise FileNotFoundError(f"World file not found: {world_path}")
@@ -91,13 +98,14 @@ def load_world(input_dir: str, level: int) -> Dict[str, Any]:
         return json.load(f)
 
 
-def load_instances(input_dir: str, level: int) -> List[Dict[str, Any]]:
+def load_instances(input_dir: str, level: int, suffix: str = "test") -> List[Dict[str, Any]]:
     """
     Load instance data for the given level.
     
     Args:
         input_dir: Data root directory.
         level: Task level (1, 2, or 3).
+        suffix: File suffix (default: "test").
         
     Returns:
         List of instance dicts with oracle_output merged.
@@ -105,8 +113,8 @@ def load_instances(input_dir: str, level: int) -> List[Dict[str, Any]]:
     Raises:
         FileNotFoundError: If instances file does not exist.
     """
-    # Flat file structure: input_dir/instances_level{level}_test.jsonl
-    instances_path = Path(input_dir) / f"instances_level{level}_test.jsonl"
+    # Flat file structure: input_dir/instances_level{level}_{suffix}.jsonl
+    instances_path = Path(input_dir) / f"instances_level{level}_{suffix}.jsonl"
     
     if not instances_path.exists():
         raise FileNotFoundError(f"Instances file not found: {instances_path}")
@@ -119,8 +127,8 @@ def load_instances(input_dir: str, level: int) -> List[Dict[str, Any]]:
                 instances.append(json.loads(line))
     
     # Try to load oracle output and merge
-    # Flat file structure: input_dir/oracle_level{level}_test.jsonl
-    oracle_path = Path(input_dir) / f"oracle_level{level}_test.jsonl"
+    # Flat file structure: input_dir/oracle_level{level}_{suffix}.jsonl
+    oracle_path = Path(input_dir) / f"oracle_level{level}_{suffix}.jsonl"
     if oracle_path.exists():
         oracle_by_id = {}
         with open(oracle_path, "r", encoding="utf-8") as f:
@@ -171,6 +179,7 @@ def run_evaluation(args: argparse.Namespace) -> None:
     print(f"Model: {args.model}")
     print(f"Input Directory: {args.input_dir}")
     print(f"Output Directory: {args.output_dir}")
+    print(f"Data Suffix: {args.suffix}")
     if args.limit:
         print(f"Limit: {args.limit} instances")
     print()
@@ -178,8 +187,8 @@ def run_evaluation(args: argparse.Namespace) -> None:
     # Load data
     print("Loading data...")
     try:
-        world = load_world(args.input_dir, args.level)
-        instances = load_instances(args.input_dir, args.level)
+        world = load_world(args.input_dir, args.level, args.suffix)
+        instances = load_instances(args.input_dir, args.level, args.suffix)
     except FileNotFoundError as e:
         print(f"ERROR: {e}")
         sys.exit(1)
@@ -218,7 +227,7 @@ def run_evaluation(args: argparse.Namespace) -> None:
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     model_safe = args.model.replace("/", "_").replace(":", "_")
-    output_file = output_dir / f"eval_L{args.level}_{model_safe}_{timestamp}.jsonl"
+    output_file = output_dir / f"eval_L{args.level}_{args.suffix}_{model_safe}_{timestamp}.jsonl"
     
     print(f"\nOutput file: {output_file}")
     print()
