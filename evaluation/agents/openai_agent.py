@@ -31,8 +31,9 @@ Systemic constraints:
 - Output format: All datetime strings must include timezone offset (e.g., +09:00).
 
 Information gathering:
-- You must use the provided tools to actively query information you need. Initially, only the Task is provided, so you should search for relevant IDs or text to collect information before performing scheduling.
-- For Level 2/3 tasks: You MUST read the communication threads (use list_thread_ids, then read_communication_thread) to discover the actual task requirements (time window, duration, number of options, policy to follow, etc.).
+- You must use the provided tools to actively query information you need.
+- Use list_* tools to discover available resources (policies, documents, threads, rooms, etc.).
+- Read all relevant sources to understand the complete requirements before scheduling.
 
 **IMPORTANT: Chain-of-Thought Required**
 Before providing the final JSON output, you MUST explain your reasoning process step-by-step:
@@ -42,35 +43,16 @@ Before providing the final JSON output, you MUST explain your reasoning process 
 4. Finally, provide the JSON object wrapped in ```json ... ``` block.
 
 **OUTPUT FORMAT (Strict JSON):**
+Return a JSON object with a "candidates" array.
+Each candidate must have "start" and "end" fields.
+If the task involves room assignment, each candidate must also include "room_id".
 
-[CRITICAL FOR LEVEL 3 - ROOM ASSIGNMENT]
-If the task involves finding/assigning a room (Level 3), every candidate object MUST include the "room_id" field.
-
-DEFINITION: Each "option" or "candidate" is a unique (start, end, room_id) tuple.
-When asked to provide N options:
-  1. Find the BEST available time slot first
-  2. Provide N DIFFERENT ROOMS at that same time slot
-  3. DO NOT provide N different time slots with the same room
-
-Sorting: earliest start → earliest end → smallest room_id.
-
-Example JSON output for Level 1/2 (no room):
+Example:
 ```json
 {
   "candidates": [
     {"start": "2026-01-20T09:00:00+09:00", "end": "2026-01-20T10:00:00+09:00"},
     {"start": "2026-01-20T09:15:00+09:00", "end": "2026-01-20T10:15:00+09:00"}
-  ]
-}
-```
-
-Example JSON output for Level 3 (with room - REQUIRED):
-```json
-{
-  "candidates": [
-    {"start": "2026-01-20T09:00:00+09:00", "end": "2026-01-20T10:00:00+09:00", "room_id": "room_001"},
-    {"start": "2026-01-20T09:00:00+09:00", "end": "2026-01-20T10:00:00+09:00", "room_id": "room_002"},
-    {"start": "2026-01-20T09:00:00+09:00", "end": "2026-01-20T10:00:00+09:00", "room_id": "room_003"}
   ]
 }
 ```"""

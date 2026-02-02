@@ -282,14 +282,14 @@ def generate_instance(world: Dict, idx: int, suffix: str) -> Dict:
     constraint_type = random.choice(["deadline", "ban_windows", "required_windows", "combined"])
     comm_text, comm_tags = generate_comm_thread(day, constraint_type)
     
-    # Generate task_text (Level 2: vague, doesn't name sources explicitly)
-    task_templates = [
-        "Schedule a meeting for three participants across internal sources. Find feasible time slots that meet all requirements.",
-        "Find meeting times for three team members. Check all internal sources to identify available slots.",
-        "Coordinate a meeting with multiple constraints. Review internal sources to find feasible options.",
-        "Schedule a meeting that satisfies all policy and communication constraints.",
-    ]
-    task_text = random.choice(task_templates)
+    # Generate task_text (Level 2: basic info + "3 sources" hint, but source names not told)
+    participants_str = ", ".join(participants)
+    task_text = (
+        f"Schedule a {duration_min}-minute meeting for {participants_str}. "
+        f"Time window: {time_window_start} to {time_window_end}. "
+        f"You must consult 3 internal sources to gather all requirements. "
+        f"Provide {num_options} feasible options sorted by earliest start time."
+    )
     
     instance_id = f"instance_level2_{suffix}_{idx:03d}"
     

@@ -285,11 +285,12 @@ def generate_instance(world: Dict, idx: int, suffix: str) -> Dict:
         time_window_start, time_window_end, policy_id
     )
     
-    # Generate task_text (Level 3: vague, doesn't name sources explicitly)
+    # Generate task_text (Level 3: requirement types + "discover all sources" hint, no source names)
     task_text = (
-        "Propose meeting candidates discussed in the communication threads. "
-        "The requirements are scattered across different internal records, and you must satisfy "
-        "participant/time constraints, organizational rules, and space constraints."
+        "Schedule a meeting for the team. "
+        "Requirements (time window, duration, number of options, policies, room needs) "
+        "are scattered across internal records. "
+        "Discover and consult all relevant sources before scheduling."
     )
     
     instance_id = f"instance_level3_{suffix}_{idx:03d}"
