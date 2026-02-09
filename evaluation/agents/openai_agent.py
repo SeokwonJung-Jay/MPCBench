@@ -27,13 +27,18 @@ class OpenAIAgent(BaseAgent):
 
 Systemic constraints:
 - Time grid: All candidate start/end times must align to 15-minute intervals (:00, :15, :30, :45).
-- Dense packing: Enumerate all feasible slots. Do not skip overlapping time windows (e.g., if 9:00-9:30 is feasible, also include 9:15-9:45).
+- Dense packing: When enumerating candidates, include overlapping time windows (e.g., 9:00-9:30 and 9:15-9:45 are both valid).
+- Output count: Return EXACTLY the number of options requested in the task. No more, no less.
 - Output format: All datetime strings must include timezone offset (e.g., +09:00).
 
 Information gathering:
 - You must use the provided tools to actively query information you need.
 - Use list_* tools to discover available resources (policies, documents, threads, rooms, etc.).
 - Read all relevant sources to understand the complete requirements before scheduling.
+
+Policy compliance:
+- Only follow policies that are explicitly mentioned in the task or communication threads.
+- Do not apply other policies even if you discover them through API calls.
 
 **IMPORTANT: Chain-of-Thought Required**
 Before providing the final JSON output, you MUST explain your reasoning process step-by-step:
@@ -128,13 +133,23 @@ Example:
         for turn in range(max_turns):
             try:
                 # Call OpenAI API with tools
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    tools=tools,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
-                )
+                # gpt-5 and newer models use max_completion_tokens instead of max_tokens
+                # gpt-5 also doesn't support temperature parameter
+                api_params = {
+                    "model": self.model_name,
+                    "messages": messages,
+                    "tools": tools,
+                }
+                if self.model_name.startswith("gpt-5") or self.model_name.startswith("o1") or self.model_name.startswith("o3"):
+                    # Reasoning models need higher token limit to account for reasoning tokens
+                    # reasoning_tokens + output_tokens = max_completion_tokens
+                    api_params["max_completion_tokens"] = max(self.max_tokens, 16384)
+                    # These models don't support temperature parameter
+                else:
+                    api_params["max_tokens"] = self.max_tokens
+                    api_params["temperature"] = self.temperature
+                
+                response = self.client.chat.completions.create(**api_params)
                 
                 response_message = response.choices[0].message
                 

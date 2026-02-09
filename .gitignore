@@ -87,6 +87,7 @@ env/
 CODE_READING_GUIDE.md
 LLM_GENERATION_EXPLANATION.md
 REFACTORING_PLAN.md
+CLAUDE.md
 
 # Cursor files
 .cursor/
