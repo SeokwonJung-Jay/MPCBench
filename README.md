@@ -72,26 +72,32 @@ Evaluation (current):
 
 - The benchmark may store rationales/explanations, but they are not scored yet.
 
-## Evaluation Results (gpt-4o)
+## Evaluation Results
 
-### Summary
+### Model Comparison
 
-| Level | F1 Score | Exact Match |
-|-------|----------|-------------|
-| L1 | 0.90 | 4/5 |
-| L2 | 0.80 | 4/5 |
-| L3 | 0.33 | 1/5 |
+| Model | L2 F1 | L2 Exact Match | L3 F1 | L3 Exact Match |
+|-------|-------|----------------|-------|----------------|
+| gpt-4o | 52.5% | 35% | 22.2% | 10% |
+| o4-mini | 100% | 100% | 80% | 80% |
+| gpt-5 | 100% | 100% | 100% | 100% |
 
 ### Failure Analysis
 
-| Level | Root Cause | Detail | Category |
-|-------|------------|--------|----------|
-| L1 | Busy Time Overlap | person_002 busy 11:30-12:00, Agent selected 11:45-12:45 which overlaps | Integration |
-| L2 | Unspecified Rule Applied | Applied POLICY_3 (buffer) not specified in task, missed 11:00 slot | Decomposition |
-| L3 | Policy Day Misapply | Applied "Monday 9-12 restricted" to Thursday (01-22) | Integration |
-| L3 | Output Format Ignore | Ignored "same time, different rooms" instruction, selected 3 different time slots | Decomposition |
-| L3 | Constraint Integration | Failed to combine buffer + busy + room availability constraints | Integration |
-| L3 | Room Selection Error | Excluded room_003 (available at 09:00) due to confusion with other time bookings | Integration |
+#### gpt-4o
+
+| Level | Category | Detail |
+|-------|----------|--------|
+| L2 | Decomposition | Applied unrequested policy rule |
+| L3 | Decomposition | Ignored "same time, different rooms" instruction |
+| L3 | Integration | Policy day misapplication |
+| L3 | Integration | Failed to combine buffer + busy + room constraints |
+
+#### o4-mini
+
+| Level | Category | Detail |
+|-------|----------|--------|
+| L3 | Decomposition | Applied unrequested policy rule |
 
 ## Data artifacts
 

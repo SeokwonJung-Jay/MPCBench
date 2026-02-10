@@ -140,7 +140,7 @@ Example:
                     "messages": messages,
                     "tools": tools,
                 }
-                if self.model_name.startswith("gpt-5") or self.model_name.startswith("o1") or self.model_name.startswith("o3"):
+                if self.model_name.startswith("gpt-5") or self.model_name.startswith("o1") or self.model_name.startswith("o3") or self.model_name.startswith("o4"):
                     # Reasoning models need higher token limit to account for reasoning tokens
                     # reasoning_tokens + output_tokens = max_completion_tokens
                     api_params["max_completion_tokens"] = max(self.max_tokens, 16384)
