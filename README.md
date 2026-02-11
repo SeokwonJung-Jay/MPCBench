@@ -77,14 +77,14 @@ Evaluation (current):
 | Difficulty | Model | Avg F1 | EM Rate | Primary Failure Causes |
 | :--- | :--- | :---: | :---: | :--- |
 | **Level 1** | GPT-4o | 0.84 | 70% | Omission of simple constraints (Integration) |
-| | **GPT-5** | **1.00** | **100%** | - |
 | | **o4-mini** | **1.00** | **100%** | - |
+| | **GPT-5** | **1.00** | **100%** | - |
 | **Level 2** | GPT-4o | 0.53 | 35% | Lack of active discovery & context misjudgment |
-| | **GPT-5** | **1.00** | **100%** | - |
 | | **o4-mini** | **1.00** | **100%** | - |
-| **Level 3** | GPT-4o | 0.22 | 10% | Failure in optimization & sorting complexity |
 | | **GPT-5** | **1.00** | **100%** | - |
+| **Level 3** | GPT-4o | 0.22 | 10% | Failure in optimization & sorting complexity |
 | | **o4-mini** | 0.80 | 80% | Over-filtering due to policy noise (Integration) |
+| | **GPT-5** | **1.00** | **100%** | - |
 
 ## Key Insights & Analysis
 
@@ -94,7 +94,7 @@ Even when all information is successfully retrieved (**Acquisition**), GPT-4o st
 ### 2. Level 2 Anomaly: Decomposition Gaps
 In Level 2, GPT-4o failed to determine "what information to look for" in **20%** of cases. When specific requirements (like duration or participants) are missing from the task prompt, the model lacks the agentic capability to proactively use `list_` tools to discover hidden context within communication threads.
 
-### 3. The Perfection of GPT-5 (SOTA)
+### 3. The Perfection of GPT-5
 GPT-5 achieved a **1.0 F1 score and 0% failure rate** across all levels. This confirms its status as the **Gold Standard** for MPCBench, demonstrating a perfect ability to decompose requirements, acquire scattered information across multiple sources, and integrate them into a flawless final output.
 
 ### 4. o4-mini’s Challenge: Refining Instruction Following
