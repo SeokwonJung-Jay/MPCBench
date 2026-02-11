@@ -52,27 +52,24 @@ CALENDAR_PATTERNS = {
     ],
 }
 
-POLICY_TEXT = """COMPANY MEETING POLICY DOCUMENT v2.3
-
-This document outlines the meeting policies for all employees. Please read carefully and follow these guidelines. Actually, wait, I think there was an update last week. Let me check...
-
-Section 1: Work Hours
-Employees should schedule meetings during standard work hours. The standard work hours are 9 AM to 6 PM. Actually, I think it might be 8:30 AM to 5:30 PM in some departments. Let me verify... No wait, it's definitely 9 to 6. Or is it 9:30? Hmm.
-
-Section 2: Lunch Breaks
-Lunch breaks are from 12:00 PM to 1:00 PM. Do not schedule meetings during this time. Actually, some teams have lunch from 11:30 to 12:30, but the official policy is 12 to 1. I think.
-
-Section 3: Buffer Times
-There should be a buffer between meetings. I think it's 10 minutes. Or maybe 15? Let me check the handbook... Actually, the system says 10 minutes minimum buffer. Yes, 10 minutes.
-
-Section 4: Restricted Times
-Monday mornings from 9 AM to 12 PM are restricted. Also Friday afternoons from 1 PM to 6 PM. Wait, is that right? Let me double-check... Yes, Monday 9-12 and Friday 1-6 are restricted.
-
-Note: This policy may be updated. Please refer to the latest version. Actually, I'm not sure if this is the latest version. Someone should update this document.
-
-Also note: Some of the above information might be outdated. Please verify with HR.
-
-END OF POLICY DOCUMENT"""
+POLICY_DOCS = {
+    "POLICY_1": {
+        "title": "Standard Work Hours",
+        "text": "All meetings must be scheduled during standard business hours. The official work hours are 9:00 AM to 6:00 PM, Monday through Friday. Actually, I heard some departments in the Berlin office use 8:30 AM to 5:30 PM, but that's a different timezone issue. The cafeteria opens at 7:30 AM if you want breakfast before work. Anyway, for meeting scheduling purposes, stick to 9 AM to 6 PM on weekdays."
+    },
+    "POLICY_2": {
+        "title": "Lunch Break Protection",
+        "text": "Lunch breaks are from 12:00 PM to 1:00 PM daily. No meetings should be scheduled during this time. Our CEO believes strongly in protecting lunch breaks - she read a study about productivity and meal times back in 2019. Some teams informally take lunch from 11:30 to 12:30, but that's their personal choice. The official no-meeting window is 12:00 to 13:00. The new salad bar in the cafeteria is excellent, by the way."
+    },
+    "POLICY_3": {
+        "title": "Meeting Buffer Time",
+        "text": "There must be a minimum 10-minute buffer between consecutive meetings. This policy replaced the old 30-minute buffer rule from 2018 - employees complained it was too restrictive. The facilities team also asks that you leave meeting rooms tidy for the next group. So yes, 10 minutes buffer is required between back-to-back meetings."
+    },
+    "POLICY_4": {
+        "title": "Restricted Time Windows",
+        "text": "Monday mornings from 9:00 AM to 12:00 PM are restricted for department all-hands meetings. Friday afternoons from 1:00 PM to 6:00 PM are also restricted - this was added in 2022 to support work-life balance. The HR team hosts optional yoga sessions on Friday afternoons. These restricted windows apply company-wide."
+    },
+}
 
 POLICY_TAGS = {
     "POLICY_1": {
@@ -106,25 +103,26 @@ POLICY_IDS = ["POLICY_1", "POLICY_2", "POLICY_3", "POLICY_4"]
 DAYS = ["2026-01-19", "2026-01-20", "2026-01-21", "2026-01-22", "2026-01-23"]
 
 # Communication thread templates (with noise)
+# {policy_id} placeholder will be filled with the policy to follow
 COMM_THREAD_TEMPLATES = {
     "deadline": [
-        "Hey team, we need to schedule a meeting. The deadline is {deadline_text}. Actually, wait, maybe it's later? No, I think that's right. Let me check... Yes, {deadline_text}.",
-        "We need to meet before {deadline_text}. I'm not 100% sure about the exact time, but I think that's the deadline. Or was it earlier? Anyway, let's aim for that.",
-        "Quick reminder - the meeting needs to happen by {deadline_text}. Someone told me it might be flexible, but let's stick with that deadline.",
+        "Hey team, we need to schedule a meeting. The deadline is {deadline_text}. Also, make sure to follow the rules in {policy_id}. Actually, wait, maybe the deadline is later? No, I think that's right.",
+        "We need to meet before {deadline_text}. Please check {policy_id} for the scheduling rules. I'm not 100% sure about the exact time, but let's aim for that.",
+        "Quick reminder - the meeting needs to happen by {deadline_text}. And we must comply with {policy_id}. Someone told me it might be flexible, but let's stick with that.",
     ],
     "ban_windows": [
-        "Some time slots are blocked. I heard {ban_text} is not available. Or was it a different time? The calendar should have the exact info.",
-        "We can't meet during {ban_text}. That time is reserved for something else. At least I think so. Check the internal records.",
-        "Avoid scheduling during {ban_text}. Those slots are blocked. I'm pretty sure that's correct.",
+        "Some time slots are blocked. I heard {ban_text} is not available. Also, please follow {policy_id} rules. The calendar should have the exact info.",
+        "We can't meet during {ban_text}. Make sure to check {policy_id} for other restrictions. At least I think so.",
+        "Avoid scheduling during {ban_text}. Those slots are blocked. And remember to comply with {policy_id}.",
     ],
     "required_windows": [
-        "The meeting must happen within {required_text}. That's the only available window. Or maybe there's another option? Let me check...",
-        "We're limited to {required_text} for this meeting. I think those are the only times that work for everyone.",
-        "Please schedule within {required_text}. Those are the approved time slots.",
+        "The meeting must happen within {required_text}. Also follow the guidelines in {policy_id}. That's the only available window. Or maybe there's another option?",
+        "We're limited to {required_text} for this meeting. Please check {policy_id} for the rules. I think those are the only times that work.",
+        "Please schedule within {required_text} and comply with {policy_id}. Those are the approved time slots.",
     ],
     "combined": [
-        "This is complicated. The deadline is {deadline_text}. Also, {ban_text} is blocked. We need to meet within {required_text}. I think. Let me verify... Actually, I'm not 100% sure about all of this.",
-        "Multiple constraints here: deadline {deadline_text}, avoid {ban_text}, and stick to {required_text}. The system should have more details.",
+        "This is complicated. The deadline is {deadline_text}. Also, {ban_text} is blocked. We need to meet within {required_text}. And follow {policy_id} rules. I think. Let me verify...",
+        "Multiple constraints here: deadline {deadline_text}, avoid {ban_text}, stick to {required_text}, and comply with {policy_id}. The system should have more details.",
     ],
 }
 
@@ -134,7 +132,7 @@ COMM_THREAD_TEMPLATES = {
 # =============================================================================
 
 def generate_world(suffix: str) -> Dict:
-    """Generate world data with policy_text and policy_tags."""
+    """Generate world data with policy_text (dict) and policy_tags."""
     return {
         "world_id": f"world_level2_{suffix}",
         "level": 2,
@@ -143,7 +141,7 @@ def generate_world(suffix: str) -> Dict:
         "world_end": "2026-01-23T23:59:59+09:00",
         "sources": {
             "calendar_json": CALENDAR_PATTERNS,
-            "policy_text": POLICY_TEXT,
+            "policy_text": POLICY_DOCS,
             "policy_tags": POLICY_TAGS,
         }
     }
@@ -160,19 +158,20 @@ def format_time_window(start: str, end: str) -> str:
     return f"{start_time} to {end_time}"
 
 
-def generate_comm_thread(day: str, constraint_type: str) -> Tuple[str, Dict]:
+def generate_comm_thread(day: str, constraint_type: str, policy_id: str) -> Tuple[str, Dict]:
     """
     Generate communication thread text and tags.
     
     Args:
         day: The day string (e.g., "2026-01-19")
         constraint_type: One of "deadline", "ban_windows", "required_windows", "combined"
+        policy_id: The policy ID to follow (e.g., "POLICY_1")
     
     Returns:
         Tuple of (comm_thread_text, comm_tags)
     """
     comm_tags = {}
-    template_vars = {}
+    template_vars = {"policy_id": policy_id}
     
     if constraint_type == "deadline":
         # Generate a deadline
@@ -278,9 +277,9 @@ def generate_instance(world: Dict, idx: int, suffix: str) -> Dict:
     time_window_start = f"{day}T{start_hour:02d}:00:00+09:00"
     time_window_end = f"{day}T{end_hour:02d}:00:00+09:00"
     
-    # Generate communication thread
+    # Generate communication thread (includes policy_id reference)
     constraint_type = random.choice(["deadline", "ban_windows", "required_windows", "combined"])
-    comm_text, comm_tags = generate_comm_thread(day, constraint_type)
+    comm_text, comm_tags = generate_comm_thread(day, constraint_type, policy_id)
     
     # Generate task_text (Level 2: basic info + "3 sources" hint, but source names not told)
     participants_str = ", ".join(participants)

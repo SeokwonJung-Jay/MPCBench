@@ -74,30 +74,31 @@ Evaluation (current):
 
 ## Evaluation Results
 
-### Model Comparison
+| Difficulty | Model | Avg F1 | EM Rate | Primary Failure Causes |
+| :--- | :--- | :---: | :---: | :--- |
+| **Level 1** | GPT-4o | 0.84 | 70% | Omission of simple constraints (Integration) |
+| | **GPT-5** | **1.00** | **100%** | - |
+| | **o4-mini** | **1.00** | **100%** | - |
+| **Level 2** | GPT-4o | 0.53 | 35% | Lack of active discovery & context misjudgment |
+| | **GPT-5** | **1.00** | **100%** | - |
+| | **o4-mini** | **1.00** | **100%** | - |
+| **Level 3** | GPT-4o | 0.22 | 10% | Failure in optimization & sorting complexity |
+| | **GPT-5** | **1.00** | **100%** | - |
+| | **o4-mini** | 0.80 | 80% | Over-filtering due to policy noise (Integration) |
 
-| Model | L2 F1 | L2 Exact Match | L3 F1 | L3 Exact Match |
-|-------|-------|----------------|-------|----------------|
-| gpt-4o | 52.5% | 35% | 22.2% | 10% |
-| o4-mini | 100% | 100% | 80% | 80% |
-| gpt-5 | 100% | 100% | 100% | 100% |
+## Key Insights & Analysis
 
-### Failure Analysis
+### 1. GPT-4o's Chronic Bottleneck: Integration Limits
+Even when all information is successfully retrieved (**Acquisition**), GPT-4o struggles most during the **Integration** phase. It fails to simultaneously process multiple heterogeneous constraints (e.g., buffer time + participant busy slots + room capacity) and identify the optimal (earliest) solution. Its 90% failure rate in Level 3 highlights a clear reasoning ceiling in complex optimization tasks.
 
-#### gpt-4o
+### 2. Level 2 Anomaly: Decomposition Gaps
+In Level 2, GPT-4o failed to determine "what information to look for" in **20%** of cases. When specific requirements (like duration or participants) are missing from the task prompt, the model lacks the agentic capability to proactively use `list_` tools to discover hidden context within communication threads.
 
-| Level | Category | Detail |
-|-------|----------|--------|
-| L2 | Decomposition | Applied unrequested policy rule |
-| L3 | Decomposition | Ignored "same time, different rooms" instruction |
-| L3 | Integration | Policy day misapplication |
-| L3 | Integration | Failed to combine buffer + busy + room constraints |
+### 3. The Perfection of GPT-5 (SOTA)
+GPT-5 achieved a **1.0 F1 score and 0% failure rate** across all levels. This confirms its status as the **Gold Standard** for MPCBench, demonstrating a perfect ability to decompose requirements, acquire scattered information across multiple sources, and integrate them into a flawless final output.
 
-#### o4-mini
-
-| Level | Category | Detail |
-|-------|----------|--------|
-| L3 | Decomposition | Applied unrequested policy rule |
+### 4. o4-mini’s Challenge: Refining Instruction Following
+While its reasoning capabilities are near GPT-5 levels, o4-mini’s **20% failure rate** in Level 3 reveals a tendency for "over-compliance." It often applies all rules found in a document (policy noise) rather than strictly adhering only to the specific Policy ID requested. This indicates a need for better **Negative Constraint** handling in smaller reasoning models.
 
 ## Data artifacts
 

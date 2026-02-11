@@ -243,32 +243,37 @@ class SimulatedAPI:
             doc_id: Document identifier (obtained from list_document_ids).
             
         Returns:
-            Dict with "doc_id", "text" (policy text), and "tags" (if available).
+            Dict with "doc_id", "title", and "text" (policy text content).
         """
         policy_text = self.world.get("sources", {}).get("policy_text", {})
         
-        # If policy_text is a dict with doc_id key
+        # If policy_text is a dict with doc_id key (new structure)
         if isinstance(policy_text, dict):
             doc_data = policy_text.get(doc_id, {})
-            return {
-                "doc_id": doc_id,
-                "text": doc_data.get("text", ""),
-                "tags": doc_data.get("tags", {})
-            }
+            if doc_data:
+                return {
+                    "doc_id": doc_id,
+                    "title": doc_data.get("title", ""),
+                    "text": doc_data.get("text", "")
+                }
+            else:
+                return {
+                    "doc_id": doc_id,
+                    "error": f"Document '{doc_id}' not found. Use list_document_ids() to see available documents."
+                }
         
-        # If policy_text is a string (single document) and virtual ID matches
+        # If policy_text is a string (legacy single document) and virtual ID matches
         if isinstance(policy_text, str):
             if doc_id == "primary_policy_doc":
                 return {
                     "doc_id": doc_id,
-                    "text": policy_text,
-                    "tags": {}
+                    "title": "Company Policy Document",
+                    "text": policy_text
                 }
         
         return {
             "doc_id": doc_id,
-            "text": "",
-            "tags": {}
+            "error": f"Document '{doc_id}' not found."
         }
     
     def read_communication_thread(self, thread_id: str) -> Dict[str, Any]:

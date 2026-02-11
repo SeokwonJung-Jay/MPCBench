@@ -72,27 +72,24 @@ CALENDAR_PATTERNS = {
     ],
 }
 
-POLICY_TEXT = """COMPANY MEETING POLICY DOCUMENT v3.1 - FINAL DRAFT
-
-This is the official meeting policy document. Actually, wait, I think there was a revision last month. Let me check the version history... No, this is definitely the latest. Or is it?
-
-Section 1: Standard Work Hours
-All meetings must be scheduled during standard business hours. The standard hours are 9:00 AM to 6:00 PM, Monday through Friday. Actually, I think some departments use 8:30 AM to 5:30 PM, but the official policy is 9 to 6. Or maybe it's 9:30? Let me verify with HR... Actually, the system configuration says 9 AM to 6 PM, so that's what we'll use.
-
-Section 2: Lunch Break Policy
-Lunch breaks are from 12:00 PM to 1:00 PM daily. No meetings should be scheduled during this time. Some teams have flexible lunch hours from 11:30 to 12:30, but the corporate standard is 12 to 1. I think.
-
-Section 3: Buffer Requirements
-There must be a minimum buffer time between consecutive meetings. The system requires a 10-minute buffer. Or is it 15 minutes? Let me check... Actually, the handbook says 10 minutes minimum. Yes, 10 minutes.
-
-Section 4: Restricted Time Windows
-Monday mornings from 9:00 AM to 12:00 PM are restricted for all-hands meetings. Friday afternoons from 1:00 PM to 6:00 PM are also restricted. Wait, is that correct? Let me double-check the calendar... Yes, Monday 9-12 and Friday 1-6 are restricted periods.
-
-Note: This policy supersedes all previous versions. Please refer to the latest update. Actually, I'm not entirely sure if this is the latest version. Someone should verify this with the compliance team.
-
-Additional Note: Some sections may be outdated. Please confirm with your manager before scheduling critical meetings.
-
-END OF POLICY DOCUMENT"""
+POLICY_DOCS = {
+    "POLICY_1": {
+        "title": "Standard Work Hours",
+        "text": "All meetings must be scheduled during standard business hours. The official work hours are 9:00 AM to 6:00 PM, Monday through Friday. Actually, I heard some departments in the Berlin office use 8:30 AM to 5:30 PM, but that's a different timezone issue. The cafeteria opens at 7:30 AM if you want breakfast before work. Anyway, for meeting scheduling purposes, stick to 9 AM to 6 PM on weekdays."
+    },
+    "POLICY_2": {
+        "title": "Lunch Break Protection",
+        "text": "Lunch breaks are from 12:00 PM to 1:00 PM daily. No meetings should be scheduled during this time. Our CEO believes strongly in protecting lunch breaks - she read a study about productivity and meal times back in 2019. Some teams informally take lunch from 11:30 to 12:30, but that's their personal choice. The official no-meeting window is 12:00 to 13:00. The new salad bar in the cafeteria is excellent, by the way."
+    },
+    "POLICY_3": {
+        "title": "Meeting Buffer Time",
+        "text": "There must be a minimum 10-minute buffer between consecutive meetings. This policy replaced the old 30-minute buffer rule from 2018 - employees complained it was too restrictive. The facilities team also asks that you leave meeting rooms tidy for the next group. So yes, 10 minutes buffer is required between back-to-back meetings."
+    },
+    "POLICY_4": {
+        "title": "Restricted Time Windows",
+        "text": "Monday mornings from 9:00 AM to 12:00 PM are restricted for department all-hands meetings. Friday afternoons from 1:00 PM to 6:00 PM are also restricted - this was added in 2022 to support work-life balance. The HR team hosts optional yoga sessions on Friday afternoons. These restricted windows apply company-wide."
+    },
+}
 
 POLICY_TAGS = {
     "POLICY_1": {
@@ -202,7 +199,7 @@ def generate_world(suffix: str) -> Dict:
         "world_end": "2026-01-23T23:59:59+09:00",
         "sources": {
             "calendar_json": CALENDAR_PATTERNS,
-            "policy_text": POLICY_TEXT,
+            "policy_text": POLICY_DOCS,
             "policy_tags": POLICY_TAGS,
             "people_table": PEOPLE_TABLE,
             "rooms_table": ROOMS_TABLE,
